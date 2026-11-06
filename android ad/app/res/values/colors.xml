@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#F8FAFC</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="text">#0F172A</color>
+    <color name="muted">#475569</color>
+    <color name="border">#CBD5E1</color>
+    <color name="success">#15803D</color>
+    <color name="warning_background">#FEF3C7</color>
+    <color name="warning_text">#78350F</color>
+    <color name="icon_shield">#1E3A5F</color>
+    <color name="icon_check">#4ADE80</color>
+</resources>

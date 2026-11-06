@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Local Ad Blocker</string>
+    <string name="switch_label">Block ads on this phone</string>
+    <string name="status_on">On. Ad servers are blocked in your apps and browsers.</string>
+    <string name="status_off">Off. Ads can appear.</string>
+    <string name="blocked_count">%1$s ad lookups blocked since it started</string>
+    <string name="limit">Ads that come from an app\'s own servers, like those in the YouTube app, can\'t be blocked this way.</string>
+    <string name="always_on">Keep it on: open VPN settings</string>
+    <string name="always_on_help">Optional. Tap the gear next to Local Ad Blocker and turn on Always-on VPN.</string>
+    <string name="private_dns_warning">Private DNS is set to a specific provider, which can send lookups around this filter. To fix it, go to Settings, search for Private DNS and choose Automatic.</string>
+    <string name="privacy">Runs only on this phone. Nothing is sent to us or anyone else. Android shows a VPN key icon, but no outside VPN server is used.</string>
+    <string name="notification_channel">Ad blocking status</string>
+    <string name="notification_title">Blocking ads</string>
+    <string name="notification_text">Runs only on this phone.</string>
+</resources>
