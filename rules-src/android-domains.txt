@@ -1,0 +1,43 @@
+# Extra ad domains seen on phones, on top of ad-domains.txt. A listed domain also covers its subdomains.
+# Only domains that exist to serve ads. Attribution and analytics services are left out,
+# because blocking them can break sign-in links and adds nothing a person would see.
+
+# --- Phone makers' own ad systems ---
+ads.samsung.com
+samsungacr.com
+api.ad.xiaomi.com
+globalapi.ad.xiaomi.com
+sdkconfig.ad.xiaomi.com
+ad.mi.com
+adsfs.oppomobile.com
+adx.ads.oppomobile.com
+ads.oppomobile.com
+adlog.vivo.com.cn
+ads-drcn.platform.dbankcloud.cn
+ads.huawei.com
+
+# --- App ad networks ---
+fyber.com
+inner-active.mobi
+digitalturbine.com
+appnext.com
+appnext-a.akamaihd.net
+adtimaserver.vn
+tradplusad.com
+bigossp.com
+sigmob.cn
+sigmob.com
+pglstatp-toutiao.com
+ad.toutiao.com
+adkmob.com
+adfurikun.jp
+nend.net
+maio.jp
+yandexadexchange.net
+hyprmx.com
+ogury.co
+smartyads.com
+pubnative.net
+verve.com
+criteo.mobi
+loopme.com

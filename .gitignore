@@ -4,3 +4,7 @@ __pycache__/
 _metadata/
 pc-wide/hosts.original
 pc-wide/windows-settings.backup.json
+android ad/.tools/
+android ad/.keys/
+android ad/build/
+android ad/dist/

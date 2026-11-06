@@ -104,6 +104,17 @@ def build_hosts_block(domains, hostnames):
     return "\n".join(lines) + "\n"
 
 
+def build_android_blocklist(domains, hostnames):
+    """Android matches parent domains, so a subdomain of a listed domain adds nothing."""
+    names = (set(domains) | set(hostnames)) - PC_WIDE_EXCLUDED
+
+    def covered(name):
+        parts = name.split(".")
+        return any(".".join(parts[start:]) in names for start in range(1, len(parts) - 1))
+
+    return sorted(name for name in names if not covered(name))
+
+
 def parse_url_patterns(text):
     rules = []
     for number, line in _lines(text, "#"):
@@ -221,7 +232,12 @@ def compile_all(source_dir, surrogate_dir):
             raise RuleError(f"{path.name}: {error}") from None
     sites = validate_sites(json.loads(read("sites.json")), set(css))
     hosts_block = build_hosts_block(domains, parse_hostnames(read("pc-hostnames.txt")))
-    return {"network": network, "css": css, "sites": sites, "hosts_block": hosts_block}
+    android_domains = domains + parse_domains(read("android-domains.txt"))
+    return {
+        "network": network, "css": css, "sites": sites, "hosts_block": hosts_block,
+        "android_blocklist": build_android_blocklist(android_domains, parse_hostnames(read("pc-hostnames.txt"))),
+        "android_allowlist": sorted(PC_WIDE_EXCLUDED - {"connect.facebook.net", "imasdk.googleapis.com"}),
+    }
 
 
 def write_output(compiled, target_dir):
@@ -247,12 +263,20 @@ def main():
     write_output(compiled, repo / "extension" / "generated")
     (repo / "pc-wide").mkdir(exist_ok=True)
     (repo / "pc-wide" / "hosts-block.txt").write_text(compiled["hosts_block"], encoding="ascii")
+    assets = repo / "android ad" / "app" / "assets"
+    assets.mkdir(parents=True, exist_ok=True)
+    (assets / "blocklist.txt").write_text("
+".join(compiled["android_blocklist"]) + "
+", encoding="ascii")
+    (assets / "allowlist.txt").write_text("
+".join(compiled["android_allowlist"]) + "
+", encoding="ascii")
     domains = len(compiled["network"][0]["condition"]["requestDomains"])
     hostnames = sum(len(line.split()) - 1 for line in compiled["hosts_block"].splitlines()
                     if line.startswith("0.0.0.0"))
     print(f"Built {len(compiled['network'])} network rules covering {domains} ad domains, "
           f"{len(compiled['css'])} style sheets, {len(compiled['sites'])} site entries, "
-          f"{hostnames} PC-wide hostnames.")
+          f"{hostnames} PC-wide hostnames, {len(compiled['android_blocklist'])} Android domains.")
     return 0
 
 
