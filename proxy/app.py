@@ -17,8 +17,8 @@ PORT = 18899
 
 # The only sites ever decrypted. Shopping, banking, email and account sign-in are left out on purpose,
 # and they connect directly without passing through the app at all.
-DECRYPT_SITES = ("youtube", "twitch", "facebook", "instagram", "x", "tiktok", "reddit", "linkedin", "pinterest",
-                 "google", "duckduckgo", "yahoo")
+# LinkedIn, Reddit and Yahoo are left out because they reject the app's connection (tests/live/bot_check.py).
+DECRYPT_SITES = ("youtube", "twitch", "facebook", "instagram", "x", "tiktok", "pinterest", "google", "duckduckgo")
 EXTRA_HOSTS = ("www.bing.com",)  # Exact name only: other Bing hosts serve Windows itself.
 
 # YouTube checks this host to see whether ads can load. Leaving it alone avoids its warning prompt.

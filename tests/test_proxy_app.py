@@ -55,15 +55,14 @@ class SiteListTests(unittest.TestCase):
 
     def test_covers_video_social_and_search(self):
         for host in ("www.youtube.com", "m.youtube.com", "music.youtube.com", "www.twitch.tv", "www.facebook.com",
-                     "www.instagram.com", "x.com", "www.tiktok.com", "www.reddit.com", "www.linkedin.com",
-                     "www.pinterest.com", "www.google.com", "www.google.com.au", "www.bing.com", "duckduckgo.com"):
+                     "www.instagram.com", "x.com", "www.tiktok.com", "www.pinterest.com", "www.google.com", "www.google.com.au", "www.bing.com", "duckduckgo.com"):
             with self.subTest(host):
                 self.assertEqual(pac_route(self.pac, host), "filtered")
 
     def test_never_decrypts_money_or_accounts(self):
         for host in ("www.commbank.com.au", "www.nab.com.au", "www.paypal.com", "www.amazon.com", "www.amazon.com.au",
                      "www.ebay.com", "accounts.google.com", "login.microsoftonline.com", "login.live.com",
-                     "mail.google.com", "drive.google.com", "github.com", "www.microsoft.com", "www.apple.com"):
+                     "mail.google.com", "drive.google.com", "www.linkedin.com", "www.reddit.com", "old.reddit.com", "search.yahoo.com", "github.com", "www.microsoft.com", "www.apple.com"):
             with self.subTest(host):
                 self.assertEqual(pac_route(self.pac, host), "direct")
 

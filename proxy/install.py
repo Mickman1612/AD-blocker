@@ -89,6 +89,7 @@ class Installer:
         script = pathlib.Path(__file__).with_name("run.py")
         self._write(RUN_KEY, VALUE_NAME, f'"{python}" "{script}"')
         if self.real:
+            self._stop_app()  # An older copy would keep the port and its old certificate.
             subprocess.Popen([str(python), str(script)], close_fds=True,
                              creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
             if not self._wait_until_running():

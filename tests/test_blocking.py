@@ -112,6 +112,12 @@ class HidingTests(unittest.TestCase):
         page.wait_for("getComputedStyle(document.querySelector('#box')).display === 'none'")
         self.assertFalse(is_hidden(page, "#body"))
 
+    def test_hides_a_leftover_sponsored_results_heading(self):
+        page = self.open('<div id=box style="height:58px"><div><span role="heading">Sponsored results</span></div></div>'
+                         '<p id=body>an organic result</p>')
+        page.wait_for("getComputedStyle(document.querySelector('#box')).display === 'none'", timeout=3)
+        self.assertFalse(is_hidden(page, "#body"))
+
     def test_keeps_a_section_that_only_mentions_the_label_among_real_content(self):
         page = self.open('<div id=box><h2>Advertisement</h2>'
                          '<p>A long article about the history of advertising in newspapers, '

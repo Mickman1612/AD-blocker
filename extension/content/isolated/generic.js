@@ -18,7 +18,8 @@
 
   const AD_LABELS = new Set([
     'advertisement', 'advertisements', 'advertising', 'advert', 'adverts', 'ad', 'ads',
-    'sponsored', 'sponsored ad', 'sponsored ads', 'sponsored content', 'promoted',
+    'sponsored', 'sponsored ad', 'sponsored ads', 'sponsored content', 'sponsored result',
+    'sponsored results', 'promoted',
     'anzeige', 'werbung', 'publicité', 'publicidad', 'anuncio', 'pubblicità', 'विज्ञापन',
   ]);
 

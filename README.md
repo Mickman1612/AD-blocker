@@ -25,7 +25,7 @@ No single method removes every kind of ad, so it combines three:
 The filtering app needs a certificate that Windows trusts, which is the risky part of any tool like this. Here's how that risk is limited:
 
 - **Nothing new can be issued.** The certificate's private key is destroyed during setup, after signing one certificate for the listed sites. Even with full access to this PC, nobody could use it to create a certificate for your bank.
-- **Only listed sites are read.** That's YouTube, Twitch, Facebook, Instagram, X, TikTok, Reddit, LinkedIn, Pinterest, and Google, Bing, DuckDuckGo and Yahoo search. On those sites, passwords and messages pass through the app on this PC.
+- **Only listed sites are read.** That's YouTube, Twitch, Facebook, Instagram, X, TikTok, Pinterest, and Google, Bing and DuckDuckGo search. LinkedIn, Reddit and Yahoo reject the app's connection, so they connect directly and only their ad servers are blocked. On those sites, passwords and messages pass through the app on this PC.
 - **Everything else goes straight to the internet.** Banks, shopping, email and account sign-in pages never touch the app. The full rules are in `proxy/app.py`.
 - **Nothing is kept.** The app stores and logs nothing, and it only accepts connections from this PC.
 - **If it stops, browsing carries on.** Listed sites connect directly, so ads may return but sites keep working.
