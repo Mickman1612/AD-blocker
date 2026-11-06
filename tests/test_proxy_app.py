@@ -259,9 +259,8 @@ class InstallTests(unittest.TestCase):
 
     def test_turn_on_does_not_say_all_done_when_a_step_failed(self):
         text = (REPO / "Turn ON ad blocker.cmd").read_text(encoding="ascii")
-        self.assertIn('windows-ads.ps1"\r\nif errorlevel 1 goto problem', text)
-        status_line = 'install.py" status\r\nif errorlevel 1 goto problem'
-        self.assertIn(status_line, text)
+        self.assertIn('windows-ads.ps1"\nif errorlevel 1 goto problem', text)
+        self.assertIn('install.py" status\nif errorlevel 1 goto problem', text)
 
     def test_status_command_fails_unless_every_part_is_on(self):
         self.assertFalse(install.all_on({"a": True, "b": False}))
