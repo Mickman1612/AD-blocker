@@ -10,6 +10,7 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 ON = REPO / "pc-wide" / "Turn on PC-wide blocking.cmd"
 OFF = REPO / "pc-wide" / "Turn off PC-wide blocking.cmd"
 LOAD = REPO / "Load extension in browsers.cmd"
+GUIDE = REPO / "tools" / "load-extension.ps1"
 ELEVATE = "Start-Process powershell -Verb RunAs -Wait -ArgumentList"
 
 
@@ -46,12 +47,56 @@ class LauncherTests(unittest.TestCase):
         for name in ("hosts.ps1", "windows-ads.ps1", "hosts-block.txt"):
             self.assertTrue((REPO / "pc-wide" / name).exists(), name)
 
-    def test_load_helper_points_at_the_extension_folder(self):
-        text = LOAD.read_text(encoding="ascii")
-        self.assertIn("%~dp0extension", text)
-        self.assertIn("chrome://extensions", text)
-        self.assertIn("edge://extensions", text)
-        self.assertTrue((REPO / "extension" / "manifest.json").exists())
+    def test_load_helper_runs_the_guided_script(self):
+        self.assertIn('"%~dp0tools\\load-extension.ps1"', LOAD.read_text(encoding="ascii"))
+        self.assertTrue(GUIDE.exists())
+
+
+class GuidedLoadTests(unittest.TestCase):
+    """Only the read-only status check runs here. It never opens a browser or touches the clipboard."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.edge = pathlib.Path(self.tmp.name) / "edge"
+        self.chrome = pathlib.Path(self.tmp.name) / "chrome"
+        self.edge.mkdir()
+        self.chrome.mkdir()
+
+    def status(self):
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(GUIDE), "-Status",
+             "-EdgeProfile", str(self.edge), "-ChromeProfile", str(self.chrome)],
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return result.stdout
+
+    def test_reports_not_loaded_when_settings_do_not_mention_our_folder(self):
+        (self.edge / "Secure Preferences").write_text('{"extensions":{"settings":{}}}', encoding="utf-8")
+        output = self.status()
+        self.assertIn("Edge: not loaded", output)
+        self.assertIn("Chrome: not loaded", output)
+
+    def test_reports_loaded_for_only_the_browser_that_has_it(self):
+        (self.chrome / "Secure Preferences").write_text(
+            '{"extensions":{"settings":{"x":{"path":"C:\\\\Ad blocker\\\\extension"}}}}', encoding="utf-8")
+        output = self.status()
+        self.assertIn("Chrome: loaded", output)
+        self.assertIn("Edge: not loaded", output)
+
+    def test_never_relies_on_a_browser_opening_its_extensions_page_from_a_command(self):
+        source = GUIDE.read_text(encoding="utf-8")
+        for line in source.splitlines():
+            if "Start-Process" in line:
+                self.assertNotIn("Address", line)
+                self.assertNotIn("://extensions", line)
+
+    def test_copies_the_page_address_and_the_folder_for_the_user_to_paste(self):
+        source = GUIDE.read_text(encoding="utf-8")
+        self.assertIn("Set-Clipboard $browser.Address", source)
+        self.assertIn("Set-Clipboard $Folder", source)
+        self.assertIn("chrome://extensions", source)
+        self.assertIn("edge://extensions", source)
 
 
 if __name__ == "__main__":

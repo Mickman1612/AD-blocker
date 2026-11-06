@@ -20,10 +20,11 @@ Double-click `pc-wide\Turn on PC-wide blocking.cmd` and click **Yes** when Windo
 
 ## Install the browser extension
 
-Double-click `Load extension in browsers.cmd`. It opens the extensions page in both browsers and copies the folder path for you. Then, in each browser:
+Double-click `Load extension in browsers.cmd`. It walks you through each browser, puts the text you need on the clipboard at each step, and tells you when it worked. Browsers don't let a program press these buttons for you, so these clicks are yours:
 
-1. Turn on **Developer mode**.
-2. Click **Load unpacked** and choose `C:\Ad blocker\extension`.
+1. Open `edge://extensions` in Edge or `chrome://extensions` in Chrome.
+2. Turn on **Developer mode**.
+3. Click **Load unpacked** and choose `C:\Ad blocker\extension`.
 
 Keep the folder where it is, because the browser reads the extension from it. If Edge asks at startup whether to turn off developer-mode extensions, decline.
 
