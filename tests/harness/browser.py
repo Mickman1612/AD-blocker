@@ -166,7 +166,8 @@ class Page:
         try:
             self._answer_paused(params)
         except RuntimeError as error:
-            if "Session with given id not found" not in str(error):  # Page already closed.
+            closed = ("Session with given id not found", "connection closed")
+            if not any(reason in str(error) for reason in closed):  # The page or browser has gone.
                 raise
 
     def _answer_paused(self, params):
