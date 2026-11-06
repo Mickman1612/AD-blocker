@@ -34,6 +34,7 @@ function scriptsFor(site, excludeMatches) {
   const isolated = [
     site.generic && 'content/isolated/generic.js',
     site.guard && 'content/isolated/video-guard.js',
+    site.feed && 'content/isolated/feed.js',
   ].filter(Boolean);
   if (isolated.length) {
     scripts.push({ ...base, id: `${site.id}-isolated`, js: isolated });

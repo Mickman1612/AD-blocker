@@ -24,7 +24,85 @@
         return Boolean(content?.adSlotRenderer || content?.statementBannerRenderer);
       },
     },
+    {
+      domains: ['x.com', 'twitter.com'],
+      urls: /\/i\/api\/(graphql|2)\//,
+      markers: ['promotedMetadata', 'promoted-tweet', 'promotedTweet'],
+      dropItem: (item) => (typeof item.entryId === 'string' && item.entryId.startsWith('promoted'))
+        || Boolean(item.content?.itemContent?.promotedMetadata
+          || item.content?.promotedMetadata
+          || item.item?.itemContent?.promotedMetadata),
+    },
+    {
+      domains: ['tiktok.com'],
+      urls: /\/api\/(recommend|explore|post|search)\//,
+      markers: ['"isAd"'],
+      dropItem: (item) => item.isAd === true,
+    },
+    {
+      domains: ['instagram.com'],
+      urls: /\/graphql\/query|\/api\/graphql|\/api\/v1\/feed\//,
+      markers: ['"ad_id"', '"ad"'],
+      dropItem: (item) => Boolean(item.ad || item.ad_id || item.media?.ad_id
+        || item.node?.ad || item.node?.ad_id || item.node?.media?.ad_id),
+    },
+    {
+      domains: ['facebook.com'],
+      markers: ['SPONSORED', 'sponsored_data'],
+      dropItem: (item) => item.category === 'SPONSORED' || item.node?.category === 'SPONSORED'
+        || Boolean(item.sponsored_data || item.node?.sponsored_data),
+    },
+    {
+      domains: ['twitch.tv'],
+      urls: /\.m3u8/,
+      rewrite: cleanPlaylist,
+      workers: true,
+    },
   ];
+
+  // Twitch stitches ads into the stream playlist. Removing their segments means the
+  // player never downloads them. This is passed to workers as source text, so it can't
+  // use anything from the surrounding code.
+  function cleanPlaylist(text) {
+    if (!text.includes('#EXTM3U') || !/stitched-ad|X-TV-TWITCH-AD|,Amazon/i.test(text)) return text;
+    const kept = [];
+    const lines = text.split('\n');
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      if (line.startsWith('#EXT-X-DATERANGE') && /stitched-ad|twitch-ad/i.test(line)) continue;
+      if (line.startsWith('#EXTINF') && !/,\s*live\s*$/i.test(line)) {
+        if (kept.at(-1)?.startsWith('#EXT-X-PROGRAM-DATE-TIME')) kept.pop();
+        index += 1; // The segment's address is on the next line.
+        continue;
+      }
+      kept.push(line);
+    }
+    return kept.join('\n');
+  }
+
+  // Runs first inside each worker. Twitch's video player lives in one.
+  function workerPrelude(clean) {
+    const nativeFetch = self.fetch;
+    self.fetch = async function fetch(input, init) {
+      const response = await nativeFetch.call(self, input, init);
+      const url = typeof input === 'string' ? input : input?.url ?? String(input);
+      if (!/\.m3u8/.test(url)) return response;
+      try {
+        const text = await response.clone().text();
+        const cleaned = clean(text);
+        if (cleaned === text) return response;
+        const replacement = new Response(cleaned, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+        });
+        Object.defineProperty(replacement, 'url', { value: response.url });
+        return replacement;
+      } catch {
+        return response;
+      }
+    };
+  }
 
   const MAX_DEPTH = 64;
   const hostname = location.hostname.toLowerCase();
@@ -72,6 +150,7 @@
 
   // Some endpoints start the body with a prefix that has to survive the rewrite.
   function rewriteText(text) {
+    if (site.rewrite) return site.rewrite(text);
     if (!hasMarker(text)) return text;
     const prefix = text.match(/^\)\]\}'\s*/)?.[0] ?? '';
     try {
@@ -170,6 +249,26 @@
     };
     wrapGetter('response');
     wrapGetter('responseText');
+  }
+
+  // --- Workers ---
+  if (site.workers) {
+    const bootstrap = `(${workerPrelude})(${cleanPlaylist});`;
+    window.Worker = new Proxy(window.Worker, {
+      construct(target, args, newTarget) {
+        try {
+          if (args[1]?.type !== 'module') {
+            const original = new URL(String(args[0]), location.href).href;
+            const source = `${bootstrap}\nimportScripts(${nativeStringify(original)});`;
+            const wrapped = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+            return Reflect.construct(target, [wrapped, ...args.slice(1)], newTarget);
+          }
+        } catch {
+          // Fall through and start the worker the page asked for.
+        }
+        return Reflect.construct(target, args, newTarget);
+      },
+    });
   }
 
   // --- Data the page writes inline, such as var ytInitialPlayerResponse = {...} ---

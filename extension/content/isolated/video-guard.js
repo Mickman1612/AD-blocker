@@ -3,7 +3,29 @@
 (() => {
   'use strict';
 
+  // For players where seeking or changing speed breaks playback, or that are live.
+  const silentOnly = (domains, marker, skip = []) => ({
+    domains,
+    player: 'body',
+    isAd: () => Boolean(document.querySelector(marker)),
+    skip,
+    fastForward: false,
+  });
+
   const SITES = [
+    silentOnly(['twitch.tv'], '[data-a-target="video-ad-label"],[data-a-target="video-ad-countdown"]'),
+    silentOnly(['netflix.com'], '[data-uia="ads-info-container"],.watch-video--adsInfo-container'),
+    silentOnly(
+      ['primevideo.com', 'amazon.com', 'amazon.co.uk', 'amazon.com.au', 'amazon.in', 'amazon.ca', 'amazon.de'],
+      '.atvwebplayersdk-ad-timer,.atvwebplayersdk-adtimeindicator-text,.adSkipButton',
+      ['.adSkipButton'],
+    ),
+    silentOnly(['hulu.com'], '.AdUnitView,[data-automationid="ad-timer"]'),
+    silentOnly(['peacocktv.com'], '.ad-countdown__container,[data-testid="ad-countdown"]'),
+    silentOnly(['max.com'], '[data-testid="ad-countdown"],[data-testid="player-ux-ad-badge"]'),
+    silentOnly(['disneyplus.com'], '[data-testid="ad-badge-overlay"],.ad-badge-overlay'),
+    silentOnly(['tubitv.com', 'pluto.tv', 'crunchyroll.com', 'dailymotion.com'], '[data-testid="ad-badge"],.ad-showing'),
+    silentOnly(['spotify.com'], '[data-testid="context-item-info-ad-title"],[data-testid="ad-link"]'),
     {
       domains: ['youtube.com', 'youtube-nocookie.com', 'youtubekids.com'],
       player: '.html5-video-player',
@@ -37,12 +59,14 @@
     }
     video.muted = true;
     video.style.opacity = '0';
-    try {
-      video.playbackRate = FAST_RATE;
-    } catch {
-      // Some players refuse fast rates. Seeking below still applies.
+    if (site.fastForward !== false) {
+      try {
+        video.playbackRate = FAST_RATE;
+      } catch {
+        // Some players refuse fast rates. Seeking below still applies.
+      }
+      seekToEnd(video);
     }
-    seekToEnd(video);
     for (const selector of site.skip ?? []) {
       for (const button of player.querySelectorAll(selector)) button.click();
     }
@@ -66,7 +90,7 @@
   }
 
   function checkPlayer(player) {
-    const video = player.querySelector('video');
+    const video = player.querySelector('video, audio');
     if (!video) return;
     if (site.isAd(player)) passAd(player, video);
     else restore(video);

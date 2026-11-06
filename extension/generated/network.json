@@ -1396,5 +1396,53 @@
 "script"
 ]
 }
+},
+{
+"id": 49,
+"priority": 3,
+"action": {
+"type": "redirect",
+"redirect": {
+"extensionPath": "/surrogates/ima3.js"
+}
+},
+"condition": {
+"urlFilter": "||imasdk.googleapis.com/js/sdkloader/ima3.js",
+"resourceTypes": [
+"script"
+]
+}
+},
+{
+"id": 50,
+"priority": 3,
+"action": {
+"type": "redirect",
+"redirect": {
+"extensionPath": "/surrogates/ima3.js"
+}
+},
+"condition": {
+"urlFilter": "||imasdk.googleapis.com/js/sdkloader/ima3_dai.js",
+"resourceTypes": [
+"script"
+]
+}
+},
+{
+"id": 51,
+"priority": 3,
+"action": {
+"type": "redirect",
+"redirect": {
+"extensionPath": "/surrogates/ima3.js"
+}
+},
+"condition": {
+"urlFilter": "||s0.2mdn.net/instream/html5/ima3.js",
+"resourceTypes": [
+"script"
+]
+}
 }
 ]

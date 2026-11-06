@@ -1,0 +1,8 @@
+[data-component-type="sp-sponsored-result"]{display:none!important}
+.AdHolder{display:none!important}
+[data-cel-widget*="adplacements"]{display:none!important}
+[cel_widget_id*="adplacements"]{display:none!important}
+[data-ad-details]{display:none!important}
+#sp_detail{display:none!important}
+#sp_detail2{display:none!important}
+[id^="ape_"]{display:none!important}

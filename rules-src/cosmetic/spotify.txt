@@ -1,0 +1,2 @@
+! Our selectors for ads on Spotify's web player.
+[data-testid*="hpto"]

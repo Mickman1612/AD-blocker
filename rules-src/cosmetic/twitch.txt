@@ -1,0 +1,5 @@
+! Our selectors for ads on Twitch.
+[data-a-target="video-ad-label"]
+[data-a-target="video-ad-countdown"]
+[data-test-selector="sad-overlay"]
+[data-test-selector="ad-banner-default-text"]

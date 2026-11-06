@@ -1,0 +1,13 @@
+! Our selectors for ads on Google Search.
+#tads
+#tadsb
+#bottomads
+#taw .commercial-unit-desktop-top
+.commercial-unit-desktop-top
+.commercial-unit-desktop-rhs
+.commercial-unit-mobile-top
+.pla-unit-container
+.pla-unit
+[data-text-ad]
+[data-ta-slot]
+div[aria-label="Ads"]

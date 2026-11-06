@@ -1,0 +1,6 @@
+! Our selectors for ads on Bing.
+li.b_ad
+.b_ad
+.b_adBottom
+.b_adLastChild
+.pa_sb

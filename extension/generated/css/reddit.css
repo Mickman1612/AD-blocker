@@ -1,0 +1,9 @@
+shreddit-ad-post{display:none!important}
+shreddit-comments-page-ad{display:none!important}
+shreddit-sidebar-ad{display:none!important}
+shreddit-dynamic-ad-link{display:none!important}
+comment-tree-ad{display:none!important}
+faceplate-tracker[source="ads"]{display:none!important}
+article:has(shreddit-ad-post){display:none!important}
+.promotedlink{display:none!important}
+[data-promoted="true"]{display:none!important}

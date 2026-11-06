@@ -1,0 +1,3 @@
+! Our selectors for ads on LinkedIn.
+.ad-banner-container
+section.ad-banner-container

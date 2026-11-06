@@ -1,0 +1,4 @@
+! Our selectors for ads on DuckDuckGo.
+[data-layout="ad"]
+[data-testid="ad"]
+.result--ad

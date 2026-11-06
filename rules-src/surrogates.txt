@@ -6,3 +6,6 @@
 ||pagead2.googlesyndication.com/pagead/js/adsbygoogle.js -> adsbygoogle.js
 ||c.amazon-adsystem.com/aax2/apstag.js -> apstag.js
 ||static.doubleclick.net/instream/ad_status.js -> ad_status.js
+||imasdk.googleapis.com/js/sdkloader/ima3.js -> ima3.js
+||imasdk.googleapis.com/js/sdkloader/ima3_dai.js -> ima3.js
+||s0.2mdn.net/instream/html5/ima3.js -> ima3.js

@@ -1,0 +1,10 @@
+! Our selectors for ads on Reddit.
+shreddit-ad-post
+shreddit-comments-page-ad
+shreddit-sidebar-ad
+shreddit-dynamic-ad-link
+comment-tree-ad
+faceplate-tracker[source="ads"]
+article:has(shreddit-ad-post)
+.promotedlink
+[data-promoted="true"]

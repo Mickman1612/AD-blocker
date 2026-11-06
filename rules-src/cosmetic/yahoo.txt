@@ -1,0 +1,5 @@
+! Our selectors for ads on Yahoo.
+.searchCenterTopAds
+.searchCenterBottomAds
+.searchRightTopAds
+.searchRightBottomAds
