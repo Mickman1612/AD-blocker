@@ -1,2 +1,7 @@
 # Harmless local stand-ins for ad libraries, so a page that expects one doesn't stall.
 # Format: pattern -> file in extension/surrogates/
+||googletagservices.com/tag/js/gpt.js -> gpt.js
+||securepubads.g.doubleclick.net/tag/js/gpt.js -> gpt.js
+||pagead2.googlesyndication.com/tag/js/gpt.js -> gpt.js
+||pagead2.googlesyndication.com/pagead/js/adsbygoogle.js -> adsbygoogle.js
+||c.amazon-adsystem.com/aax2/apstag.js -> apstag.js

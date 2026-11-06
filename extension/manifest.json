@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Local Ad Blocker",
+  "version": "1.0.0",
+  "description": "Blocks ads on this PC using only local rules. Makes no network requests of its own.",
+  "minimum_chrome_version": "121",
+  "permissions": ["declarativeNetRequest", "scripting", "storage", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_popup": "popup/popup.html", "default_title": "Local Ad Blocker" },
+  "declarative_net_request": {
+    "rule_resources": [{ "id": "ads", "enabled": true, "path": "generated/network.json" }]
+  },
+  "web_accessible_resources": [{ "resources": ["surrogates/*.js"], "matches": ["<all_urls>"] }],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self'; base-uri 'none'"
+  }
+}

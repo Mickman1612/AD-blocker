@@ -1326,5 +1326,85 @@
 ],
 "domainType": "thirdParty"
 }
+},
+{
+"id": 44,
+"priority": 3,
+"action": {
+"type": "redirect",
+"redirect": {
+"extensionPath": "/surrogates/gpt.js"
+}
+},
+"condition": {
+"urlFilter": "||googletagservices.com/tag/js/gpt.js",
+"resourceTypes": [
+"script"
+]
+}
+},
+{
+"id": 45,
+"priority": 3,
+"action": {
+"type": "redirect",
+"redirect": {
+"extensionPath": "/surrogates/gpt.js"
+}
+},
+"condition": {
+"urlFilter": "||securepubads.g.doubleclick.net/tag/js/gpt.js",
+"resourceTypes": [
+"script"
+]
+}
+},
+{
+"id": 46,
+"priority": 3,
+"action": {
+"type": "redirect",
+"redirect": {
+"extensionPath": "/surrogates/gpt.js"
+}
+},
+"condition": {
+"urlFilter": "||pagead2.googlesyndication.com/tag/js/gpt.js",
+"resourceTypes": [
+"script"
+]
+}
+},
+{
+"id": 47,
+"priority": 3,
+"action": {
+"type": "redirect",
+"redirect": {
+"extensionPath": "/surrogates/adsbygoogle.js"
+}
+},
+"condition": {
+"urlFilter": "||pagead2.googlesyndication.com/pagead/js/adsbygoogle.js",
+"resourceTypes": [
+"script"
+]
+}
+},
+{
+"id": 48,
+"priority": 3,
+"action": {
+"type": "redirect",
+"redirect": {
+"extensionPath": "/surrogates/apstag.js"
+}
+},
+"condition": {
+"urlFilter": "||c.amazon-adsystem.com/aax2/apstag.js",
+"resourceTypes": [
+"script"
+]
+}
 }
 ]
