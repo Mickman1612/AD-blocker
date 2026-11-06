@@ -222,14 +222,22 @@ class PopupTests(unittest.TestCase):
         self.assertTrue(page.eval("document.getElementById('pick').disabled"))
         self.assertIn("can't", page.eval("document.getElementById('host').textContent").lower())
 
+    def test_browser_pages_do_not_claim_blocking_is_on(self):
+        page = self.open_popup("edge://settings/")
+        self.assertEqual(page.eval("document.getElementById('toggle').getAttribute('aria-checked')"), "false")
+
+    def test_browser_pages_show_no_empty_button(self):
+        page = self.open_popup("edge://settings/")
+        self.assertEqual(page.eval("getComputedStyle(document.getElementById('clear')).display"), "none")
+
     def test_clear_button_only_appears_when_there_are_rules(self):
         send_message(self.browser, {"type": "clear-rules", "host": "shop.example.test"})
         page = self.open_popup()
-        self.assertTrue(page.eval("document.getElementById('clear').hidden"))
+        self.assertEqual(page.eval("getComputedStyle(document.getElementById('clear')).display"), "none")
         send_message(self.browser, {"type": "save-rule", "host": "shop.example.test", "selector": "#x"})
         page.reload()
         page.wait_for("document.body.dataset.ready === 'true'", timeout=5)
-        self.assertFalse(page.eval("document.getElementById('clear').hidden"))
+        self.assertNotEqual(page.eval("getComputedStyle(document.getElementById('clear')).display"), "none")
         self.assertIn("1", page.eval("document.getElementById('clear').textContent"))
         send_message(self.browser, {"type": "clear-rules", "host": "shop.example.test"})
 

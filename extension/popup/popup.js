@@ -31,6 +31,7 @@ async function start() {
   if (!host) {
     hostLabel.textContent = "Ad blocking can't run on this page.";
     toggle.disabled = true;
+    toggle.setAttribute('aria-checked', 'false');
     pick.disabled = true;
     status.textContent = '';
     return;
