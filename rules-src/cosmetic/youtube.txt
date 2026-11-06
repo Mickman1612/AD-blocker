@@ -1,0 +1,44 @@
+! Our selectors for ads on YouTube.
+
+! --- Home, search and watch page ---
+ytd-ad-slot-renderer
+ytd-in-feed-ad-layout-renderer
+ytd-display-ad-renderer
+ytd-promoted-sparkles-web-renderer
+ytd-promoted-video-renderer
+ytd-compact-promoted-video-renderer
+ytd-search-pyv-renderer
+ytd-banner-promo-renderer
+ytd-statement-banner-renderer
+ytd-primetime-promo-renderer
+ytd-companion-slot-renderer
+ytd-action-companion-ad-renderer
+ytd-player-legacy-desktop-watch-ads-renderer
+ytd-merch-shelf-renderer
+ytd-mealbar-promo-renderer
+ytd-video-masthead-ad-v3-renderer
+ytd-video-masthead-ad-advertiser-info-renderer
+#masthead-ad
+#player-ads
+ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-ads"]
+ytd-rich-item-renderer:has(ytd-ad-slot-renderer)
+ytd-rich-section-renderer:has(ytd-statement-banner-renderer)
+ytd-reel-video-renderer:has(ytd-ad-slot-renderer)
+
+! --- Inside the player ---
+.video-ads
+.ytp-ad-module
+.ytp-ad-overlay-container
+.ytp-ad-image-overlay
+.ytp-ad-text-overlay
+
+! --- The "ad blockers are not allowed" prompt ---
+ytd-enforcement-message-view-model
+tp-yt-paper-dialog:has(ytd-enforcement-message-view-model)
+
+! --- Mobile site and YouTube Music ---
+ytm-promoted-sparkles-web-renderer
+ytm-companion-ad-renderer
+ytm-promoted-video-renderer
+ad-slot-renderer
+ytmusic-mealbar-promo-renderer

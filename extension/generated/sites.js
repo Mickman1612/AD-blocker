@@ -7,5 +7,16 @@ export const SITES = [
     ],
     "css": "generic",
     "generic": true
+  },
+  {
+    "id": "youtube",
+    "matches": [
+      "*://*.youtube.com/*",
+      "*://*.youtube-nocookie.com/*",
+      "*://*.youtubekids.com/*"
+    ],
+    "css": "youtube",
+    "hooks": true,
+    "guard": true
   }
 ];

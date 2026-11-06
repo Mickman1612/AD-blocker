@@ -77,6 +77,7 @@ class WebSocket:
 
     def close(self):
         try:
+            self._reader.close()
             self._sock.close()
         except OSError:
             pass
@@ -123,7 +124,7 @@ class Cdp:
         while True:
             try:
                 text = self._ws.recv()
-            except OSError:  # The browser closing the socket is the normal way to end.
+            except (OSError, ValueError):  # A closed socket is the normal way to end.
                 text = None
             if text is None:
                 self._events.put(None)

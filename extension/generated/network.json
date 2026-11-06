@@ -421,7 +421,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||google.com/pagead/*",
+"urlFilter": "||google.*/pagead/*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -447,7 +447,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||google.com/adsense/*",
+"urlFilter": "||google.*/adsense/*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -473,7 +473,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||google.com/afs/ads*",
+"urlFilter": "||google.*/afs/ads*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -499,7 +499,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||google.co.uk/pagead/*",
+"urlFilter": "||youtube.com/pagead/*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -525,7 +525,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||youtube.com/pagead/*",
+"urlFilter": "||youtube.com/api/stats/ads*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -551,7 +551,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||youtube.com/api/stats/ads*",
+"urlFilter": "||youtube.com/ptracking*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -577,7 +577,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||youtube.com/ptracking*",
+"urlFilter": "||youtube.com/get_midroll_*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -603,7 +603,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||youtube.com/get_midroll_*",
+"urlFilter": "||youtube.com/pcs/activeview*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -629,7 +629,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||youtube.com/pcs/activeview*",
+"urlFilter": "||youtube.com/youtubei/v1/player/ad_break*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -655,7 +655,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||youtube.com/youtubei/v1/player/ad_break*",
+"urlFilter": "||facebook.com/tr/*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -681,7 +681,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||facebook.com/tr/*",
+"urlFilter": "||facebook.com/tr?*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -707,7 +707,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||facebook.com/tr?*",
+"urlFilter": "||facebook.net/*/fbevents.js",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -733,7 +733,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||facebook.net/*/fbevents.js",
+"urlFilter": "||linkedin.com/li/track*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -759,7 +759,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||linkedin.com/li/track*",
+"urlFilter": "||reddit.com/api/v2/promoted*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -785,7 +785,7 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||reddit.com/api/v2/promoted*",
+"urlFilter": "||amazon.com/aan/*",
 "resourceTypes": [
 "sub_frame",
 "stylesheet",
@@ -811,32 +811,6 @@
 "type": "block"
 },
 "condition": {
-"urlFilter": "||amazon.com/aan/*",
-"resourceTypes": [
-"sub_frame",
-"stylesheet",
-"script",
-"image",
-"font",
-"object",
-"xmlhttprequest",
-"ping",
-"csp_report",
-"media",
-"websocket",
-"webtransport",
-"webbundle",
-"other"
-]
-}
-},
-{
-"id": 18,
-"priority": 1,
-"action": {
-"type": "block"
-},
-"condition": {
 "urlFilter": "/prebid.js",
 "resourceTypes": [
 "script"
@@ -845,7 +819,7 @@
 }
 },
 {
-"id": 19,
+"id": 18,
 "priority": 1,
 "action": {
 "type": "block"
@@ -859,7 +833,7 @@
 }
 },
 {
-"id": 20,
+"id": 19,
 "priority": 1,
 "action": {
 "type": "block"
@@ -873,7 +847,7 @@
 }
 },
 {
-"id": 21,
+"id": 20,
 "priority": 1,
 "action": {
 "type": "block"
@@ -900,7 +874,7 @@
 }
 },
 {
-"id": 22,
+"id": 21,
 "priority": 1,
 "action": {
 "type": "block"
@@ -913,7 +887,7 @@
 }
 },
 {
-"id": 23,
+"id": 22,
 "priority": 1,
 "action": {
 "type": "block"
@@ -926,7 +900,7 @@
 }
 },
 {
-"id": 24,
+"id": 23,
 "priority": 1,
 "action": {
 "type": "block"
@@ -939,7 +913,7 @@
 }
 },
 {
-"id": 25,
+"id": 24,
 "priority": 1,
 "action": {
 "type": "block"
@@ -952,7 +926,7 @@
 }
 },
 {
-"id": 26,
+"id": 25,
 "priority": 1,
 "action": {
 "type": "block"
@@ -965,7 +939,7 @@
 }
 },
 {
-"id": 27,
+"id": 26,
 "priority": 1,
 "action": {
 "type": "block"
@@ -992,7 +966,7 @@
 }
 },
 {
-"id": 28,
+"id": 27,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1019,7 +993,7 @@
 }
 },
 {
-"id": 29,
+"id": 28,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1046,7 +1020,7 @@
 }
 },
 {
-"id": 30,
+"id": 29,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1073,7 +1047,7 @@
 }
 },
 {
-"id": 31,
+"id": 30,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1100,7 +1074,7 @@
 }
 },
 {
-"id": 32,
+"id": 31,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1127,7 +1101,7 @@
 }
 },
 {
-"id": 33,
+"id": 32,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1154,7 +1128,7 @@
 }
 },
 {
-"id": 34,
+"id": 33,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1181,7 +1155,7 @@
 }
 },
 {
-"id": 35,
+"id": 34,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1197,7 +1171,7 @@
 }
 },
 {
-"id": 36,
+"id": 35,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1213,7 +1187,7 @@
 }
 },
 {
-"id": 37,
+"id": 36,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1229,7 +1203,7 @@
 }
 },
 {
-"id": 38,
+"id": 37,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1245,7 +1219,7 @@
 }
 },
 {
-"id": 39,
+"id": 38,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1259,7 +1233,7 @@
 }
 },
 {
-"id": 40,
+"id": 39,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1273,7 +1247,7 @@
 }
 },
 {
-"id": 41,
+"id": 40,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1287,7 +1261,7 @@
 }
 },
 {
-"id": 42,
+"id": 41,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1301,7 +1275,7 @@
 }
 },
 {
-"id": 43,
+"id": 42,
 "priority": 1,
 "action": {
 "type": "block"
@@ -1328,7 +1302,7 @@
 }
 },
 {
-"id": 44,
+"id": 43,
 "priority": 3,
 "action": {
 "type": "redirect",
@@ -1344,7 +1318,7 @@
 }
 },
 {
-"id": 45,
+"id": 44,
 "priority": 3,
 "action": {
 "type": "redirect",
@@ -1360,7 +1334,7 @@
 }
 },
 {
-"id": 46,
+"id": 45,
 "priority": 3,
 "action": {
 "type": "redirect",
@@ -1376,7 +1350,7 @@
 }
 },
 {
-"id": 47,
+"id": 46,
 "priority": 3,
 "action": {
 "type": "redirect",
@@ -1392,7 +1366,7 @@
 }
 },
 {
-"id": 48,
+"id": 47,
 "priority": 3,
 "action": {
 "type": "redirect",
@@ -1402,6 +1376,22 @@
 },
 "condition": {
 "urlFilter": "||c.amazon-adsystem.com/aax2/apstag.js",
+"resourceTypes": [
+"script"
+]
+}
+},
+{
+"id": 48,
+"priority": 3,
+"action": {
+"type": "redirect",
+"redirect": {
+"extensionPath": "/surrogates/ad_status.js"
+}
+},
+"condition": {
+"urlFilter": "||static.doubleclick.net/instream/ad_status.js",
 "resourceTypes": [
 "script"
 ]

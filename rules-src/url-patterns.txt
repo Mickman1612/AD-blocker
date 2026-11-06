@@ -4,10 +4,9 @@
 # Start a pattern with @@ to allow it instead.
 
 # --- Ad paths on hosts we can't block outright ---
-||google.com/pagead/*
-||google.com/adsense/*
-||google.com/afs/ads*
-||google.co.uk/pagead/*
+||google.*/pagead/*
+||google.*/adsense/*
+||google.*/afs/ads*
 ||youtube.com/pagead/*
 ||youtube.com/api/stats/ads*
 ||youtube.com/ptracking*

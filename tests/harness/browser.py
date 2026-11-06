@@ -105,12 +105,16 @@ class Browser:
     def service_worker_wait_for(self, expression, timeout=10):
         """The worker target appears before its script has finished running, so poll."""
         deadline = time.time() + timeout
+        last_error = None
         while True:
-            value = self.service_worker_eval(expression)
-            if value:
-                return value
+            try:
+                value = self.service_worker_eval(expression)
+                if value:
+                    return value
+            except RuntimeError as error:  # Extension APIs appear shortly after the target does.
+                last_error = error
             if time.time() > deadline:
-                raise TimeoutError(f"Worker never satisfied: {expression}")
+                raise TimeoutError(f"Worker never satisfied: {expression} ({last_error})")
             time.sleep(0.05)
 
     def reattach_service_worker(self):

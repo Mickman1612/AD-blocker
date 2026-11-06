@@ -28,8 +28,15 @@ function scriptsFor(site, excludeMatches) {
   if (site.css) {
     scripts.push({ ...base, id: `${site.id}-css`, css: [`generated/css/${site.css}.css`] });
   }
-  if (site.generic) {
-    scripts.push({ ...base, id: `${site.id}-isolated`, js: ['content/isolated/generic.js'] });
+  if (site.hooks) {
+    scripts.push({ ...base, id: `${site.id}-hooks`, js: ['content/main/net-hooks.js'], world: 'MAIN' });
+  }
+  const isolated = [
+    site.generic && 'content/isolated/generic.js',
+    site.guard && 'content/isolated/video-guard.js',
+  ].filter(Boolean);
+  if (isolated.length) {
+    scripts.push({ ...base, id: `${site.id}-isolated`, js: isolated });
   }
   return scripts;
 }

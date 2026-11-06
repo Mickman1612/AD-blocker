@@ -2,6 +2,7 @@
 import contextlib
 import json
 import pathlib
+import re
 
 from tests.harness.browser import Browser
 
@@ -26,7 +27,7 @@ def page_with(browser, url, html, **fixtures):
     page = browser.new_page()
     for pattern, (body, headers) in fixtures.items():
         page.fixture(pattern, body, headers=headers)
-    page.fixture("^" + url.replace(".", r"\.") + "$", html, headers=HTML)
+    page.fixture("^" + re.escape(url) + "$", html, headers=HTML)
     page.goto(url)
     return page
 
