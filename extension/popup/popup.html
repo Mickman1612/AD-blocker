@@ -3,6 +3,31 @@
 <head>
   <meta charset="utf-8">
   <title>Local Ad Blocker</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
-<body></body>
+<body data-ready="false">
+  <header class="brand">
+    <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path class="brand-shield" d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5l-8-3Z"/>
+      <path class="brand-check" d="m8.5 12 2.5 2.5 4.5-5"/>
+    </svg>
+    <h1>Local Ad Blocker</h1>
+  </header>
+
+  <main>
+    <p id="host" class="host">&nbsp;</p>
+
+    <button id="toggle" class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="toggle-label">
+      <span id="toggle-label">Block ads on this site</span>
+      <span class="track" aria-hidden="true"><span class="thumb"></span></span>
+    </button>
+    <p id="status" class="status" aria-live="polite"></p>
+
+    <button id="pick" class="action" type="button">Hide something on this page</button>
+    <button id="clear" class="action quiet" type="button" hidden></button>
+  </main>
+
+  <footer class="note">Runs only on this PC. Nothing is sent anywhere.</footer>
+  <script src="popup.js" type="module"></script>
+</body>
 </html>

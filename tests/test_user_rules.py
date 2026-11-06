@@ -132,6 +132,27 @@ class PickerTests(unittest.TestCase):
         page.wait_for("getComputedStyle(document.querySelector('#card')).display === 'none'", timeout=3)
         self.assertFalse(is_hidden(page, "#card2"))
 
+    def test_rule_is_precise_when_lookalikes_have_no_ids(self):
+        page = page_with(self.browser, SITE, '<div><div class="promo" style="height:40px">one</div>'
+                                             '<div class="promo" style="height:40px">two</div></div>')
+        self.addCleanup(page.close)
+        self.browser.service_worker_eval(f"""
+            chrome.tabs.query({{url: {json.dumps(SITE)}}}).then(([tab]) =>
+              chrome.scripting.executeScript({{target: {{tabId: tab.id}},
+                files: ['content/isolated/picker.js']}})).then(() => true)""")
+        box = page.eval("""(() => { const r = document.querySelectorAll('.promo')[0].getBoundingClientRect();
+            return {x: r.x + 5, y: r.y + 5}; })()""")
+        for kind in ("mouseMoved", "mousePressed", "mouseReleased"):
+            params = {"type": kind, "x": box["x"], "y": box["y"]}
+            if kind != "mouseMoved":
+                params.update(button="left", clickCount=1)
+            page._send("Input.dispatchMouseEvent", params)
+        page.wait_for("getComputedStyle(document.querySelectorAll('.promo')[0]).display === 'none'", timeout=3)
+        time.sleep(0.2)
+        page.reload()
+        page.wait_for("getComputedStyle(document.querySelectorAll('.promo')[0]).display === 'none'", timeout=3)
+        self.assertEqual(page.eval("getComputedStyle(document.querySelectorAll('.promo')[1]).display"), "block")
+
     def test_escape_cancels_without_saving(self):
         page = self.open_with_picker()
         page._send("Input.dispatchKeyEvent", {"type": "keyDown", "key": "Escape", "code": "Escape",

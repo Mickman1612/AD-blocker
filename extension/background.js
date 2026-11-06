@@ -3,6 +3,7 @@ import { SITES } from './generated/sites.js';
 
 const PAUSE_PRIORITY = 10; // Must outrank every static rule, including surrogate redirects.
 const HOST_RE = /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/;
+const MAX_SELECTOR_LENGTH = 1000;
 
 const normalizeHost = (host) => String(host ?? '').trim().toLowerCase().replace(/^www\./, '');
 
@@ -33,6 +34,7 @@ function scriptsFor(site, excludeMatches) {
   }
   const isolated = [
     site.generic && 'content/isolated/generic.js',
+    site.generic && 'content/isolated/user-rules.js',
     site.guard && 'content/isolated/video-guard.js',
     site.feed && 'content/isolated/feed.js',
   ].filter(Boolean);
@@ -90,14 +92,61 @@ function setPaused(host, shouldPause) {
   });
 }
 
-async function handleMessage(message) {
+async function getUserRules() {
+  const { userRules = {} } = await chrome.storage.local.get('userRules');
+  return userRules;
+}
+
+const isSafeSelector = (selector) => typeof selector === 'string' && selector.length > 0
+  && selector.length <= MAX_SELECTOR_LENGTH && !/[{}<]/.test(selector);
+
+function saveRule(host, selector) {
+  return enqueue(async () => {
+    const userRules = await getUserRules();
+    userRules[host] = [...new Set([...(userRules[host] ?? []), selector])];
+    await chrome.storage.local.set({ userRules });
+    return { ruleCount: userRules[host].length };
+  });
+}
+
+function clearRules(host) {
+  return enqueue(async () => {
+    const userRules = await getUserRules();
+    delete userRules[host];
+    await chrome.storage.local.set({ userRules });
+    return { ruleCount: 0 };
+  });
+}
+
+async function applyRules(host, sender) {
+  const rules = (await getUserRules())[host] ?? [];
+  if (!rules.length || !sender.tab) return { applied: 0 };
+  await chrome.scripting.insertCSS({
+    target: { tabId: sender.tab.id, frameIds: [sender.frameId] },
+    origin: 'USER',
+    css: rules.map((selector) => `${selector}{display:none!important}`).join('\n'),
+  });
+  return { applied: rules.length };
+}
+
+async function handleMessage(message, sender) {
   const host = normalizeHost(message.host);
   if (!HOST_RE.test(host)) return { error: 'bad host' };
   switch (message.type) {
     case 'get-state':
-      return { paused: (await getPaused()).includes(host) };
+      return {
+        paused: (await getPaused()).includes(host),
+        ruleCount: (await getUserRules())[host]?.length ?? 0,
+      };
     case 'set-paused':
       return setPaused(host, Boolean(message.paused));
+    case 'save-rule':
+      if (!isSafeSelector(message.selector)) return { error: 'bad selector' };
+      return saveRule(host, message.selector);
+    case 'clear-rules':
+      return clearRules(host);
+    case 'apply-rules':
+      return applyRules(host, sender);
     default:
       return { error: 'unknown message' };
   }
@@ -107,6 +156,6 @@ chrome.runtime.onInstalled.addListener(applyAll);
 chrome.runtime.onStartup.addListener(applyAll);
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false;
-  handleMessage(message).then(sendResponse, (error) => sendResponse({ error: String(error) }));
+  handleMessage(message, sender).then(sendResponse, (error) => sendResponse({ error: String(error) }));
   return true;
 });
