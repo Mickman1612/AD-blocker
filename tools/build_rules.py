@@ -265,12 +265,8 @@ def main():
     (repo / "pc-wide" / "hosts-block.txt").write_text(compiled["hosts_block"], encoding="ascii")
     assets = repo / "android ad" / "app" / "assets"
     assets.mkdir(parents=True, exist_ok=True)
-    (assets / "blocklist.txt").write_text("
-".join(compiled["android_blocklist"]) + "
-", encoding="ascii")
-    (assets / "allowlist.txt").write_text("
-".join(compiled["android_allowlist"]) + "
-", encoding="ascii")
+    for name, key in (("blocklist.txt", "android_blocklist"), ("allowlist.txt", "android_allowlist")):
+        (assets / name).write_text("".join(f"{entry}\n" for entry in compiled[key]), encoding="ascii")
     domains = len(compiled["network"][0]["condition"]["requestDomains"])
     hostnames = sum(len(line.split()) - 1 for line in compiled["hosts_block"].splitlines()
                     if line.startswith("0.0.0.0"))
