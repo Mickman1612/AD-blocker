@@ -1,5 +1,5 @@
 # BEGIN Local Ad Blocker
-# Added by C:\Ad blocker\pc-wide. Use 'Turn off PC-wide blocking' there to remove it.
+# Added by C:\Ad blocker. Use 'Turn OFF ad blocker' there to remove it.
 0.0.0.0 1rx.io 2mdn.net 33across.com 360yield.com 3lift.com 7cbf2.v.fwmrm.net a-ads.com a.ads1.msn.com
 0.0.0.0 a.ads2.msn.com a.applovin.com a.teads.tv aan.amazon.com aax-eu-dub.amazon-adsystem.com aax-eu.amazon-adsystem.com aax-fe-sin.amazon-adsystem.com aax-fe.amazon-adsystem.com
 0.0.0.0 aax-us-east.amazon-adsystem.com aax-us-iad.amazon-adsystem.com aax.amazon-adsystem.com aax.media aaxads.com acdn.adnxs.com ad-apac.doubleclick.net ad-emea.doubleclick.net

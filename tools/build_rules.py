@@ -96,7 +96,7 @@ def build_hosts_block(domains, hostnames):
         if domain.count(".") == 1:
             names.add(f"www.{domain}")
     ordered = sorted(names - PC_WIDE_EXCLUDED)
-    lines = [HOSTS_BEGIN, r"# Added by C:\Ad blocker\pc-wide. Use 'Turn off PC-wide blocking' there to remove it."]
+    lines = [HOSTS_BEGIN, r"# Added by C:\Ad blocker. Use 'Turn OFF ad blocker' there to remove it."]
     for address in ("0.0.0.0", "::"):
         for start in range(0, len(ordered), HOSTS_NAMES_PER_LINE):
             lines.append(f"{address} {' '.join(ordered[start:start + HOSTS_NAMES_PER_LINE])}")

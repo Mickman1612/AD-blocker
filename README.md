@@ -1,56 +1,54 @@
 # Local Ad Blocker
 
-An ad blocker for this one PC. Every rule and script here was written for this project. It uses no outside lists or services and makes no network requests of its own.
+An ad blocker for this one PC. Every rule and script here was written for this project. It uses no outside lists or services, and nothing is sent anywhere.
 
-It has three parts, because no single method can remove every kind of ad:
+## Turn it on
+
+Double-click **Turn ON ad blocker** and click **Yes** when Windows asks. Then close and reopen your browsers.
+
+That's all. It starts by itself every time you turn on your PC.
+
+To remove it completely, double-click **Turn OFF ad blocker**. Python must stay installed, and this folder must stay where it is, because the app runs from here.
+
+## What it does
+
+No single method removes every kind of ad, so it combines three:
 
 | Part | Reaches | Removes |
 |---|---|---|
 | Hosts list | Every app that uses Windows name lookups | Ads from known ad servers |
 | Windows settings | Windows itself | Promotions in Start, File Explorer, the lock screen and tips |
-| Browser extension | Edge, Chrome and other Chromium browsers it's loaded in | YouTube ads, feed ads and empty ad boxes |
+| Filtering app | Browsers and apps that follow the Windows proxy setting | YouTube ads, ads in social feeds and search results |
 
-## Turn on PC-wide blocking
+## How your security is protected
 
-Double-click `pc-wide\Turn on PC-wide blocking.cmd` and click **Yes** when Windows asks. Then close and reopen your browsers and other apps.
+The filtering app needs a certificate that Windows trusts, which is the risky part of any tool like this. Here's how that risk is limited:
 
-- The Windows settings change without asking for administrator rights. The hosts file step is the one that asks.
-- Some security software warns about hosts file changes, because malware also edits that file. This change only adds a marked block of ad servers.
-- To undo everything, double-click `pc-wide\Turn off PC-wide blocking.cmd`. It removes only our block and restores your earlier Windows settings. The original hosts file is also saved as `pc-wide\hosts.original`.
-
-## Install the browser extension
-
-Double-click `Load extension in browsers.cmd`. It walks you through each browser, puts the text you need on the clipboard at each step, and tells you when it worked. Browsers don't let a program press these buttons for you, so these clicks are yours:
-
-1. Open `edge://extensions` in Edge or `chrome://extensions` in Chrome.
-2. Turn on **Developer mode**.
-3. Click **Load unpacked** and choose `C:\Ad blocker\extension`.
-
-Keep the folder where it is, because the browser reads the extension from it. If Edge asks at startup whether to turn off developer-mode extensions, decline.
-
-## Using the extension
-
-Click the toolbar icon on any site:
-
-- **Block ads on this site:** turn this off if a site breaks or refuses to load.
-- **Hide something on this page:** click anything on the page to hide it there from then on. Press Esc to cancel.
-- **Show the items you hid:** undoes those choices for that site.
-
-The number on the icon counts what was blocked on the current page.
+- **Nothing new can be issued.** The certificate's private key is destroyed during setup, after signing one certificate for the listed sites. Even with full access to this PC, nobody could use it to create a certificate for your bank.
+- **Only listed sites are read.** That's YouTube, Twitch, Facebook, Instagram, X, TikTok, Reddit, LinkedIn, Pinterest, and Google, Bing, DuckDuckGo and Yahoo search. On those sites, passwords and messages pass through the app on this PC.
+- **Everything else goes straight to the internet.** Banks, shopping, email and account sign-in pages never touch the app. The full rules are in `proxy/app.py`.
+- **Nothing is kept.** The app stores and logs nothing, and it only accepts connections from this PC.
+- **If it stops, browsing carries on.** Listed sites connect directly, so ads may return but sites keep working.
 
 ## What it can't do
 
-- **YouTube's wait:** when an ad is due, YouTube's server holds the video back for about the ad's length. You see a loading spinner rather than the ad.
-- **No automatic updates:** this follows from using nothing external. When a platform changes how it serves ads, some can return until the rules here are updated.
-- **Less long-tail coverage** than community lists. Use the picker for anything that gets through.
-- **Stream-stitched ads:** on some streaming services, ads are part of the video. Where we can detect one, the player is muted and hidden until it ends, so the wait remains.
+- **YouTube's wait:** when an ad is due, YouTube's server can hold the video back for about the ad's length. You may see a spinner rather than the ad.
+- **Ads an app serves from its own servers,** when that app ignores the proxy setting.
+- **Empty ad boxes** on sites outside the list. The ad itself is gone but its space may remain. The optional browser extension hides these.
+- **Sponsored links** that go through a blocked ad server won't open.
+- **Stream-stitched ads** on some streaming services are part of the video.
 - **Sponsor segments** that creators build into their videos.
-- **Ads an app serves from its own servers:** the hosts list can't separate these from the app's real content.
-- **Sponsored links** that go through a blocked ad server won't open while PC-wide blocking is on.
+- **No automatic updates:** this follows from using nothing external. When a platform changes how it serves ads, some can return until the rules here are updated.
+
+Some security software warns about the hosts file or certificate changes, because malware makes similar changes. These only come from running the Turn ON file.
+
+## Optional: the browser extension
+
+You don't need this. It adds a pop-up with a per-site off switch, click-to-hide, and hiding of empty ad boxes on every site. To add it, double-click `optional\Load extension in browsers.cmd`, which walks you through the steps.
 
 ## Changing the rules
 
-The rules are in `rules-src/`. After editing them, rebuild, then click the reload icon on the extension's card in the browser's extensions page:
+The rules are in `rules-src/`. After editing them, rebuild, then run **Turn ON ad blocker** again:
 
 ```bash
 python tools/build_rules.py
@@ -61,13 +59,11 @@ python tools/build_rules.py
 | `rules-src/ad-domains.txt` | Ad network domains to block |
 | `rules-src/pc-hostnames.txt` | Exact ad hostnames for the hosts file, which can't match subdomains |
 | `rules-src/url-patterns.txt` | Ad URL patterns |
-| `rules-src/surrogates.txt` | Ad libraries to replace with harmless local stand-ins |
+| `rules-src/surrogates.txt` | Harmless local stand-ins for ad libraries, used by the extension |
 | `rules-src/cosmetic/*.txt` | Page elements to hide, one file per site |
 | `rules-src/sites.json` | Which scripts and styles apply to which sites |
 
-After changing the hostnames, run the Turn on file again to update the hosts file. To find new hostnames, run `python -m tests.live.harvest_hostnames`.
-
-Per-site logic is in `extension/content/`: `main/net-hooks.js` removes ad data from responses, `isolated/feed.js` hides feed items, and `isolated/video-guard.js` handles video ads that get through.
+Per-site page logic is in `extension/content/`, and the filtering app uses those same files. To find new ad hostnames, run `python -m tests.live.harvest_hostnames`.
 
 ## Tests
 
@@ -77,7 +73,11 @@ Needs only Python and Edge. Browser tests use a temporary profile, so your own p
 python -m unittest discover -s tests -t .
 ```
 
-Live checks visit real sites, with and without the extension:
+Live checks visit real sites, with and without blocking:
+
+```bash
+python -m tests.live.proxy_check
+```
 
 ```bash
 python -m tests.live.youtube_compare
@@ -88,11 +88,7 @@ python -m tests.live.site_check
 ```
 
 ```bash
-python -m tests.live.twitch_check
-```
-
-```bash
 python -m tests.live.pc_wide_check
 ```
 
-With PC-wide blocking on, the "without the extension" side of these checks is also blocked, so turn it off first for a true comparison.
+Turn the ad blocker off first for a true comparison, because the "normal" side of these checks would otherwise be blocked too.

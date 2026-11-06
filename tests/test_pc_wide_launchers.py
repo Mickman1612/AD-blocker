@@ -1,15 +1,15 @@
 """The double-click files. These never elevate or touch real settings: a copy runs with the
 elevation swapped for printing, in a folder without the scripts, so only quoting is exercised."""
 import pathlib
-import shutil
+import re
 import subprocess
 import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
-ON = REPO / "pc-wide" / "Turn on PC-wide blocking.cmd"
-OFF = REPO / "pc-wide" / "Turn off PC-wide blocking.cmd"
-LOAD = REPO / "Load extension in browsers.cmd"
+ON = REPO / "Turn ON ad blocker.cmd"
+OFF = REPO / "Turn OFF ad blocker.cmd"
+LOAD = REPO / "optional" / "Load extension in browsers.cmd"
 GUIDE = REPO / "tools" / "load-extension.ps1"
 ELEVATE = "Start-Process powershell -Verb RunAs -Wait -ArgumentList"
 
@@ -20,35 +20,42 @@ class LauncherTests(unittest.TestCase):
             data = path.read_bytes()
             self.assertEqual(data.count(b"\n"), data.count(b"\r\n"), path.name)
 
-    def test_only_the_hosts_step_asks_for_administrator_rights(self):
+    def test_there_is_exactly_one_administrator_step(self):
         for path in (ON, OFF):
             elevated = [line for line in path.read_text(encoding="ascii").splitlines() if "RunAs" in line]
             self.assertEqual(len(elevated), 1, path.name)
-            self.assertIn("hosts.ps1", elevated[0])
+            self.assertIn("elevated.ps1", elevated[0])
 
     def elevated_arguments(self, launcher):
-        """The arguments the elevated PowerShell would get when run from a folder with a space."""
+        """What the elevated PowerShell would receive, run from a folder with a space in its name."""
         with tempfile.TemporaryDirectory(prefix="adb launcher ") as tmp:
             copy = pathlib.Path(tmp) / "launcher.cmd"
             text = launcher.read_text(encoding="ascii").replace(ELEVATE, "Write-Output").replace("pause", "rem")
+            text = re.sub(r"if errorlevel 1 goto \w+", "rem", text)
             copy.write_bytes(text.encode("ascii"))
             result = subprocess.run(["cmd", "/c", str(copy)], capture_output=True, text=True, timeout=60)
             return result.stdout, tmp
 
-    def test_turn_on_passes_the_script_path_intact(self):
+    def test_turn_on_passes_both_paths_intact(self):
         output, folder = self.elevated_arguments(ON)
-        self.assertIn(f'-File "{folder}\\hosts.ps1"', output)
+        self.assertIn(f'-File "{folder}\\proxy\\elevated.ps1" -CaPath "', output)
+        self.assertIn('LocalAdBlocker\\ca.cer"', output)
 
     def test_turn_off_passes_the_off_switch(self):
-        output, folder = self.elevated_arguments(OFF)
-        self.assertIn(f'-File "{folder}\\hosts.ps1" -Off', output)
+        output, _ = self.elevated_arguments(OFF)
+        self.assertIn('LocalAdBlocker\\ca.cer" -Off', output)
 
-    def test_scripts_the_launchers_call_exist(self):
-        for name in ("hosts.ps1", "windows-ads.ps1", "hosts-block.txt"):
-            self.assertTrue((REPO / "pc-wide" / name).exists(), name)
+    def test_the_files_they_call_exist(self):
+        for name in ("pc-wide/hosts.ps1", "pc-wide/windows-ads.ps1", "pc-wide/hosts-block.txt",
+                     "proxy/elevated.ps1", "proxy/install.py", "proxy/run.py"):
+            self.assertTrue((REPO / name).exists(), name)
 
-    def test_load_helper_runs_the_guided_script(self):
-        self.assertIn('"%~dp0tools\\load-extension.ps1"', LOAD.read_text(encoding="ascii"))
+    def test_turning_on_waits_for_permission_before_redirecting_browsers(self):
+        text = ON.read_text(encoding="ascii")
+        self.assertLess(text.index("RunAs"), text.index("install.py\" activate"))
+
+    def test_optional_extension_helper_runs_the_guided_script(self):
+        self.assertIn('"%~dp0..\\tools\\load-extension.ps1"', LOAD.read_text(encoding="ascii"))
         self.assertTrue(GUIDE.exists())
 
 

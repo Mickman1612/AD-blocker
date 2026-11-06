@@ -43,6 +43,22 @@ The user widened the goal from browsers to the entire PC.
 
 **Known cost:** the hosts file can't tell an ad from the page you asked for, so clicking a sponsored link that goes through a blocked ad domain fails, which the extension's rules would otherwise allow.
 
+## Auto-start app (added 2026-11-06, replaces the proxy decision above)
+
+The user found the extension's manual steps too many and asked for an app that starts with the PC. Chrome and Edge won't force-install off-store extensions on an unmanaged PC, so a local proxy is the only way to reach YouTube's ads without browser steps. It is contained as follows:
+
+| Risk | Containment |
+|---|---|
+| A root certificate could impersonate any site | Its private key is **destroyed during setup**, right after signing one certificate, so nothing further can ever be issued. It also carries name constraints |
+| The app sees decrypted traffic | Only listed video, social and search sites are decrypted. Shopping and banking never are. Nothing is logged or stored, and it listens on loopback only |
+| A crash could take browsing down | The proxy setting is a PAC file with `DIRECT` fallback, so browsing continues without it |
+| Slow or broken traffic | Only listed sites and ad domains go through it. Everything else, including video streams, connects directly |
+| Hard to remove | One double-click removes the certificate, proxy setting, startup entry, hosts block and Windows settings |
+
+**Page filtering reuses the extension's own scripts and styles**, injected into HTML responses. A hash is added to the page's security policy only where needed. Other responses pass through unchanged.
+
+**Limits compared with the extension:** generic hiding only applies on decrypted sites, so other sites can show empty ad boxes. There's no pop-up, so a site can't be paused individually.
+
 ## Why an extension built by us
 
 Domain blocking can't remove YouTube ads, which come from the same servers as the videos. A local proxy needs a root certificate on the PC. An MV3 extension needs neither, and it can't take the internet down if it fails.
