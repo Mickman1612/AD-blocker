@@ -78,6 +78,7 @@ Community lists have far more rules than we can write, so we replace coverage by
 
 ## Known limits
 
+- **YouTube's wait.** When an ad is due and doesn't play, YouTube's streaming server holds the video back for roughly the ad's length, using a countdown it enforces itself. The user sees a loading spinner instead of the ad. Requesting no-ad playback, hiding the inline response, removing the back-off and running the ad hidden were all tested on 2026-11-06, and none removed the wait.
 - **Upkeep is ours.** With no updater, ads can return when a platform changes until we fix the rules here.
 - **Smaller long-tail coverage** than community lists. The heuristics and the picker partly make up for that.
 - **Stitched ads** are part of the video stream. The video guard can hide and mute them or speed past them, but on live streams the wait may remain.
