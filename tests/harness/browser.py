@@ -74,10 +74,12 @@ class Browser:
         port_file = pathlib.Path(self._profile) / "DevToolsActivePort"
         deadline = time.time() + 30
         while time.time() < deadline:
-            if port_file.exists():
+            try:
                 lines = port_file.read_text().split("\n")
                 if len(lines) >= 2 and lines[1].strip():
                     return f"ws://127.0.0.1:{lines[0].strip()}{lines[1].strip()}"
+            except OSError:  # Not written yet, or the browser is still holding it open.
+                pass
             time.sleep(0.1)
         raise TimeoutError("Edge did not open a debugging port")
 

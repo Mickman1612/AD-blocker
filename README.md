@@ -1,18 +1,33 @@
 # Local Ad Blocker
 
-An ad blocker for this one PC, for Edge, Chrome and other Chromium browsers. Every rule and script here was written for this project. It uses no outside lists or services and makes no network requests of its own.
+An ad blocker for this one PC. Every rule and script here was written for this project. It uses no outside lists or services and makes no network requests of its own.
 
-## Install
+It has three parts, because no single method can remove every kind of ad:
 
-Do this once in each browser:
+| Part | Reaches | Removes |
+|---|---|---|
+| Hosts list | Every app that uses Windows name lookups | Ads from known ad servers |
+| Windows settings | Windows itself | Promotions in Start, File Explorer, the lock screen and tips |
+| Browser extension | Edge, Chrome and other Chromium browsers it's loaded in | YouTube ads, feed ads and empty ad boxes |
 
-1. Open `edge://extensions` in Edge or `chrome://extensions` in Chrome.
-2. Turn on **Developer mode**.
-3. Click **Load unpacked** and choose `C:\Ad blocker\extension`.
+## Turn on PC-wide blocking
+
+Double-click `pc-wide\Turn on PC-wide blocking.cmd` and click **Yes** when Windows asks. Then close and reopen your browsers and other apps.
+
+- The Windows settings change without asking for administrator rights. The hosts file step is the one that asks.
+- Some security software warns about hosts file changes, because malware also edits that file. This change only adds a marked block of ad servers.
+- To undo everything, double-click `pc-wide\Turn off PC-wide blocking.cmd`. It removes only our block and restores your earlier Windows settings. The original hosts file is also saved as `pc-wide\hosts.original`.
+
+## Install the browser extension
+
+Double-click `Load extension in browsers.cmd`. It opens the extensions page in both browsers and copies the folder path for you. Then, in each browser:
+
+1. Turn on **Developer mode**.
+2. Click **Load unpacked** and choose `C:\Ad blocker\extension`.
 
 Keep the folder where it is, because the browser reads the extension from it. If Edge asks at startup whether to turn off developer-mode extensions, decline.
 
-## Using it
+## Using the extension
 
 Click the toolbar icon on any site:
 
@@ -28,7 +43,9 @@ The number on the icon counts what was blocked on the current page.
 - **No automatic updates:** this follows from using nothing external. When a platform changes how it serves ads, some can return until the rules here are updated.
 - **Less long-tail coverage** than community lists. Use the picker for anything that gets through.
 - **Stream-stitched ads:** on some streaming services, ads are part of the video. Where we can detect one, the player is muted and hidden until it ends, so the wait remains.
-- **Sponsor segments** that creators build into their videos, and ads in apps outside the browser.
+- **Sponsor segments** that creators build into their videos.
+- **Ads an app serves from its own servers:** the hosts list can't separate these from the app's real content.
+- **Sponsored links** that go through a blocked ad server won't open while PC-wide blocking is on.
 
 ## Changing the rules
 
@@ -41,10 +58,13 @@ python tools/build_rules.py
 | File | Purpose |
 |---|---|
 | `rules-src/ad-domains.txt` | Ad network domains to block |
+| `rules-src/pc-hostnames.txt` | Exact ad hostnames for the hosts file, which can't match subdomains |
 | `rules-src/url-patterns.txt` | Ad URL patterns |
 | `rules-src/surrogates.txt` | Ad libraries to replace with harmless local stand-ins |
 | `rules-src/cosmetic/*.txt` | Page elements to hide, one file per site |
 | `rules-src/sites.json` | Which scripts and styles apply to which sites |
+
+After changing the hostnames, run the Turn on file again to update the hosts file. To find new hostnames, run `python -m tests.live.harvest_hostnames`.
 
 Per-site logic is in `extension/content/`: `main/net-hooks.js` removes ad data from responses, `isolated/feed.js` hides feed items, and `isolated/video-guard.js` handles video ads that get through.
 
@@ -69,3 +89,9 @@ python -m tests.live.site_check
 ```bash
 python -m tests.live.twitch_check
 ```
+
+```bash
+python -m tests.live.pc_wide_check
+```
+
+With PC-wide blocking on, the "without the extension" side of these checks is also blocked, so turn it off first for a true comparison.

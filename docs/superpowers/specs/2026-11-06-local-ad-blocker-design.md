@@ -18,9 +18,30 @@ These come from the user and override any coverage gain:
 
 ## Scope
 
-- **In:** Edge and Chrome, both Chromium 156, and any other Chromium browser added later.
-- **Out:** apps outside the browser, and Firefox, which isn't installed and has different sideloading rules.
+- **In:** every app on this PC through the hosts file, Windows' own ad settings, and page-level blocking in Edge, Chrome and any other Chromium browser through the extension.
+- **Out:** Firefox's extension, because it isn't installed and has different sideloading rules. The hosts file would still cover it.
 - **Ads only.** This doesn't bypass paywalls, DRM or subscription content.
+
+## PC-wide layer (added 2026-11-06)
+
+The user widened the goal from browsers to the entire PC.
+
+| Option | Reaches | Removes YouTube ads | Risk | Decision |
+|---|---|---|---|---|
+| Hosts file | Every app using Windows name lookups | No | Low. Nothing runs, nothing is decrypted, and it undoes cleanly | **Use** |
+| Windows ad settings | Start menu, lock screen, File Explorer, tips | No | Low. Per-user and undoable | **Use** |
+| Extension | Browsers it's loaded in | Yes | Low | **Keep** |
+| Local DNS server | Every app using Windows DNS | No | Medium. Lookups depend on a running process and the upstream setting goes stale across networks | No |
+| Root-certificate proxy | Apps honouring the proxy setting | Yes | High. A leaked key could impersonate any site, and pinned apps break | No |
+
+**Hosts file details:**
+- The hosts file matches exact names only, so the list holds our ad domains plus specific hostnames in `rules-src/pc-hostnames.txt`, gathered from what real pages request and from what we know.
+- `static.doubleclick.net` is excluded on purpose. YouTube loads `ad_status.js` from it, and the extension answers that request locally. Blocking it for browsers without the extension could invite YouTube's ad-blocker warning.
+- The extension's rules run before name lookup, so its local stand-ins still work with the hosts file in place.
+- Both scripts are run by the user. This session has no admin rights and doesn't change system settings itself.
+- A marked block is added to the hosts file, and turning it off removes only that block.
+
+**Known cost:** the hosts file can't tell an ad from the page you asked for, so clicking a sponsored link that goes through a blocked ad domain fails, which the extension's rules would otherwise allow.
 
 ## Why an extension built by us
 

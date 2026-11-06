@@ -32,6 +32,15 @@ PROTECTED_DOMAINS = {
     "ytimg.com",
 }
 
+# Never put these in the PC-wide hosts file. Most serve real content alongside ad paths, which only
+# the extension can tell apart. static.doubleclick.net is where YouTube checks that ads can load.
+PC_WIDE_EXCLUDED = {
+    "connect.facebook.net", "imasdk.googleapis.com", "static.doubleclick.net",
+}
+HOSTS_BEGIN = "# BEGIN Local Ad Blocker"
+HOSTS_END = "# END Local Ad Blocker"
+HOSTS_NAMES_PER_LINE = 8  # Windows may ignore names beyond about nine on one line.
+
 DOMAIN_RE = re.compile(r"^(?!-)[a-z0-9-]+(\.[a-z0-9-]+)+$")
 MATCH_RE = re.compile(r"^(\*|https?)://(\*|(\*\.)?[^/*]+)/.*$")
 SITE_ID_RE = re.compile(r"^[a-z0-9-]+$")
@@ -60,6 +69,39 @@ def parse_domains(text):
             raise RuleError(f"line {number}: {domain} is protected, list an ad subdomain instead")
         domains[domain] = True
     return list(domains)
+
+
+def _is_main_site_of_protected_domain(name):
+    bare = name[4:] if name.startswith("www.") else name
+    return bare in PROTECTED_DOMAINS or bool(re.match(r"^google\.[a-z.]+$", bare))
+
+
+def parse_hostnames(text):
+    """Exact names for the hosts file. Unlike ad-domains.txt, a name here covers nothing else."""
+    hostnames = {}
+    for number, line in _lines(text, "#"):
+        name = line.split("#", 1)[0].strip().lower()
+        if not DOMAIN_RE.match(name):
+            raise RuleError(f"line {number}: not a hostname: {line!r}")
+        if name in PC_WIDE_EXCLUDED or _is_main_site_of_protected_domain(name):
+            raise RuleError(f"line {number}: {name} must stay reachable for every app")
+        hostnames[name] = True
+    return list(hostnames)
+
+
+def build_hosts_block(domains, hostnames):
+    names = set(hostnames)
+    for domain in domains:
+        names.add(domain)
+        if domain.count(".") == 1:
+            names.add(f"www.{domain}")
+    ordered = sorted(names - PC_WIDE_EXCLUDED)
+    lines = [HOSTS_BEGIN, r"# Added by C:\Ad blocker\pc-wide. Use 'Turn off PC-wide blocking' there to remove it."]
+    for address in ("0.0.0.0", "::"):
+        for start in range(0, len(ordered), HOSTS_NAMES_PER_LINE):
+            lines.append(f"{address} {' '.join(ordered[start:start + HOSTS_NAMES_PER_LINE])}")
+    lines.append(HOSTS_END)
+    return "\n".join(lines) + "\n"
 
 
 def parse_url_patterns(text):
@@ -165,8 +207,9 @@ def compile_all(source_dir, surrogate_dir):
     surrogate_dir = pathlib.Path(surrogate_dir)
     read = lambda name: (source_dir / name).read_text(encoding="utf-8")
     available = {p.name for p in surrogate_dir.glob("*.js")} if surrogate_dir.exists() else set()
+    domains = parse_domains(read("ad-domains.txt"))
     network = build_network_rules(
-        parse_domains(read("ad-domains.txt")),
+        domains,
         parse_url_patterns(read("url-patterns.txt")),
         parse_surrogates(read("surrogates.txt"), available),
     )
@@ -177,7 +220,8 @@ def compile_all(source_dir, surrogate_dir):
         except RuleError as error:
             raise RuleError(f"{path.name}: {error}") from None
     sites = validate_sites(json.loads(read("sites.json")), set(css))
-    return {"network": network, "css": css, "sites": sites}
+    hosts_block = build_hosts_block(domains, parse_hostnames(read("pc-hostnames.txt")))
+    return {"network": network, "css": css, "sites": sites, "hosts_block": hosts_block}
 
 
 def write_output(compiled, target_dir):
@@ -201,9 +245,14 @@ def main():
         print(f"Build failed, nothing was changed: {error}", file=sys.stderr)
         return 1
     write_output(compiled, repo / "extension" / "generated")
+    (repo / "pc-wide").mkdir(exist_ok=True)
+    (repo / "pc-wide" / "hosts-block.txt").write_text(compiled["hosts_block"], encoding="ascii")
     domains = len(compiled["network"][0]["condition"]["requestDomains"])
+    hostnames = sum(len(line.split()) - 1 for line in compiled["hosts_block"].splitlines()
+                    if line.startswith("0.0.0.0"))
     print(f"Built {len(compiled['network'])} network rules covering {domains} ad domains, "
-          f"{len(compiled['css'])} style sheets, {len(compiled['sites'])} site entries.")
+          f"{len(compiled['css'])} style sheets, {len(compiled['sites'])} site entries, "
+          f"{hostnames} PC-wide hostnames.")
     return 0
 
 
