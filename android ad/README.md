@@ -51,6 +51,6 @@ python build.py apk
 python tests/emulator_check.py
 ```
 
-- `python setup_tools.py` downloads the build tools into `.tools/` (about 6.5 GB with the test phone, and this accepts Google's Android SDK licence). Nothing is installed into Windows, and you can delete that folder to get the space back.
+- `python setup_tools.py` downloads the build tools into `.tools/` (about 11 GB once the test phone has run, and this accepts Google's Android SDK licence). Nothing is installed into Windows, and you can delete that folder to get the space back.
 - `.keys/` holds the app's signing key. An updated app only installs over the old one if it's signed with this key, so keep that folder. Without it, you'd have to uninstall the app first.
 - `tests/CoreTests.java` covers the packet logic and runs as part of `build.py`. `tests/emulator_check.py` runs the real app on a simulated phone.

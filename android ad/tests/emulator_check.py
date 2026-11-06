@@ -149,6 +149,9 @@ def main():
         if not wait_for_boot():
             raise SystemExit("The test phone didn't start. See .tools/avd-home/emulator.log")
         print("Android version:", shell("getprop ro.build.version.release"), "| API", shell("getprop ro.build.version.sdk"), flush=True)
+        # An earlier run can leave the app installed and on, so the switch would turn it off instead.
+        shell(f"pm uninstall {PACKAGE}")
+        check("no filter is running at the start", wait_for(lambda: not filter_active(), 20))
         check("network works before the app", wait_for(lambda: resolves("www.google.com"), 120))
         for name in CONTROL_ADS:
             check(f"control: {name} resolves before the app", resolves(name))
@@ -169,10 +172,17 @@ def main():
         time.sleep(3)
         check_names("after restart", ALLOWED_AFTER_RESTART)
 
+        updated = adb("install", "-r", str(APK), timeout=180)
+        check("app updates over itself", "Success" in updated)
+        check("filter comes back by itself after an update", wait_for(filter_active, 60))
+        time.sleep(3)
+        check("after update: an ad server is still blocked", not resolves("cdn.taboola.com"))
+
         open_app()
         tap_switch()
         check("filter turns off", wait_for(lambda: not filter_active(), 30))
-        check("turning it off restores ad lookups", wait_for(lambda: resolves("cdn.taboola.com"), 20))
+        # A name not looked up while on, because Android briefly remembers "no such name" answers.
+        check("turning it off restores ad lookups", wait_for(lambda: resolves("widgets.outbrain.com"), 20))
         check("no crashes overall", crash_lines() in ("0", ""))
     finally:
         adb("emu", "kill")
