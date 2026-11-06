@@ -1,0 +1,54 @@
+# Our own URL patterns, using the browser's urlFilter syntax.
+# Format: pattern | option | option
+# Options: third-party, first-party, types=script,image, only=a.com,b.com, except=a.com
+# Start a pattern with @@ to allow it instead.
+
+# --- Ad paths on hosts we can't block outright ---
+||google.com/pagead/*
+||google.com/adsense/*
+||google.com/afs/ads*
+||google.co.uk/pagead/*
+||youtube.com/pagead/*
+||youtube.com/api/stats/ads*
+||youtube.com/ptracking*
+||youtube.com/get_midroll_*
+||youtube.com/pcs/activeview*
+||youtube.com/youtubei/v1/player/ad_break*
+||facebook.com/tr/*
+||facebook.com/tr?*
+||facebook.net/*/fbevents.js
+||linkedin.com/li/track*
+||reddit.com/api/v2/promoted*
+||amazon.com/aan/*
+
+# --- Ad libraries, wherever they're hosted ---
+/prebid.js | third-party | types=script
+/prebid-*.js | third-party | types=script
+/pbjs.js | third-party | types=script
+/gampad/ads* | third-party
+/adsbygoogle.js | types=script
+/fuckadblock.js | types=script
+/blockadblock.js | types=script
+/fuckadblock.min.js | types=script
+/blockadblock.min.js | types=script
+
+# --- Common ad-server paths, third-party only to avoid breaking a site's own files ---
+/adserver/* | third-party
+/adservers/* | third-party
+/ad-server/* | third-party
+/adserve/* | third-party
+/adserving/* | third-party
+/adrequest/* | third-party
+/ad_request/* | third-party
+/adframe.* | third-party
+/adbanner/* | third-party | types=image,sub_frame,script
+/ad_banner/* | third-party | types=image,sub_frame,script
+/banner_ads/* | third-party | types=image,sub_frame,script
+/bannerads/* | third-party | types=image,sub_frame,script
+
+# --- Video ad tags ---
+/vast.xml | third-party | types=xmlhttprequest
+/vmap.xml | third-party | types=xmlhttprequest
+/vast/* | third-party | types=xmlhttprequest
+/vmap/* | third-party | types=xmlhttprequest
+/vpaid/* | third-party

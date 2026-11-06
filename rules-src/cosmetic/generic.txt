@@ -1,0 +1,80 @@
+! Our own selectors for standard ad slots, applied on every site.
+! Keep these tied to real ad systems. Very short names like .ad or #ad are often used
+! as bait by anti-adblock scripts, so hiding them would make things worse.
+
+! --- Google ---
+ins.adsbygoogle
+.adsbygoogle
+[id^="google_ads_iframe"]
+[id^="div-gpt-ad"]
+[id^="gpt-ad"]
+[id^="gpt_ad"]
+[data-google-query-id]
+[data-ad-client]
+[data-ad-slot]
+iframe[id^="aswift_"]
+iframe[name^="google_ads_iframe"]
+iframe[src*="doubleclick.net"]
+iframe[src*="googlesyndication.com"]
+a[href*="googleadservices.com/pagead/aclk"]
+
+! --- Other networks ---
+iframe[src*="amazon-adsystem.com"]
+iframe[src*="adnxs.com"]
+iframe[src*="criteo.com"]
+iframe[src*="taboola.com"]
+iframe[src*="outbrain.com"]
+iframe[title="Advertisement"]
+iframe[title="3rd party ad content"]
+.taboola
+[id^="taboola-"]
+.trc_related_container
+.trc_rbox_container
+.OUTBRAIN
+.ob-widget
+.ob-smartfeed-wrapper
+#carbonads
+.carbon-ads
+.native-ad
+
+! --- AMP ---
+amp-ad
+amp-sticky-ad
+amp-embed[type="taboola"]
+amp-embed[type="outbrain"]
+
+! --- Publisher ad managers ---
+[class*="adthrive-"]
+.adthrive
+[id^="ezoic-pub-ad"]
+.ezoic-ad
+.mv-ad-box
+[data-freestar-ad]
+[id^="adfox_"]
+[id^="yandex_rtb"]
+
+! --- Common ad containers ---
+[data-adunit]
+[data-ad-unit]
+[data-dfp-ad]
+[data-testid="ad-slot"]
+[aria-label="Advertisement"]
+[aria-label="Advertisements"]
+[id^="ad-slot"]
+[id^="ad_unit"]
+[id^="adunit"]
+.ad-slot
+.ad_slot
+.adslot
+.adSlot
+.ad-unit
+.adUnit
+.ad-wrapper
+.ad-container
+.ad_container
+.adContainer
+.advertisement
+.advertising
+.advert
+gpt-ad
+ad-slot

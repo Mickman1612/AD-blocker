@@ -1,0 +1,2 @@
+# Harmless local stand-ins for ad libraries, so a page that expects one doesn't stall.
+# Format: pattern -> file in extension/surrogates/

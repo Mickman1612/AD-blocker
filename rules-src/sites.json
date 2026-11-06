@@ -1,0 +1,3 @@
+[
+  {"id": "generic", "matches": ["<all_urls>"], "css": "generic", "generic": true}
+]
