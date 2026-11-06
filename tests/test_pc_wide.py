@@ -1,6 +1,7 @@
 """The PC-wide layer: the hosts list, and the scripts the user runs to turn it on and off."""
 import json
 import pathlib
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -164,6 +165,49 @@ class HostsScriptTests(unittest.TestCase):
                             "-BackupPath", str(self.hosts) + ".original")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.hosts.read_bytes(), b"# x\r\n")
+
+
+class RunExactlyLikeTheDoubleClickFilesTests(unittest.TestCase):
+    """The double-click files run these with no backup path. A copy of each script runs from a
+    temporary folder, so no real setting or backup is touched."""
+
+    def setUp(self):
+        delete_tree(TEST_ROOT)
+        self.addCleanup(delete_tree, TEST_ROOT)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.folder = pathlib.Path(self.tmp.name)
+
+    def copy_in(self, *names):
+        for name in names:
+            shutil.copy(PC_WIDE / name, self.folder / name)
+
+    def test_windows_settings_script_works_with_its_default_backup_location(self):
+        self.copy_in("windows-ads.ps1")
+        result = powershell(self.folder / "windows-ads.ps1", "-Root", rf"HKCU:\{TEST_ROOT}")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue((self.folder / "windows-settings.backup.json").exists())
+
+    def test_windows_settings_undo_works_with_its_default_backup_location(self):
+        self.copy_in("windows-ads.ps1")
+        powershell(self.folder / "windows-ads.ps1", "-Root", rf"HKCU:\{TEST_ROOT}")
+        result = powershell(self.folder / "windows-ads.ps1", "-Root", rf"HKCU:\{TEST_ROOT}", "-Undo")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse((self.folder / "windows-settings.backup.json").exists())
+
+    def test_hosts_script_works_with_its_default_backup_location(self):
+        self.copy_in("hosts.ps1", "hosts-block.txt")
+        hosts = self.folder / "hosts"
+        hosts.write_bytes(b"# x\r\n")
+        result = powershell(self.folder / "hosts.ps1", "-HostsPath", str(hosts), "-NoFlush")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((self.folder / "hosts.original").read_bytes(), b"# x\r\n")
+
+    def test_hosts_status_runs_directly(self):
+        self.copy_in("hosts.ps1", "hosts-block.txt")
+        result = powershell(self.folder / "hosts.ps1", "-Status")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("PC-wide blocking is", result.stdout)
 
 
 def read_value(subkey, name):

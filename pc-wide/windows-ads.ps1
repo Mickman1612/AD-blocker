@@ -3,11 +3,13 @@
 [CmdletBinding()]
 param(
     [string]$Root = 'HKCU:',
-    [string]$BackupPath = (Join-Path $PSScriptRoot 'windows-settings.backup.json'),
+    [string]$BackupPath,
     [switch]$Undo
 )
 
 $ErrorActionPreference = 'Stop'
+# Not a parameter default: when a script is run directly, $PSScriptRoot is empty up there.
+if (-not $BackupPath) { $BackupPath = Join-Path $PSScriptRoot 'windows-settings.backup.json' }
 $Delivery = 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager'
 $Explorer = 'Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
 

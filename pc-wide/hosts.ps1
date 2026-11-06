@@ -3,13 +3,15 @@
 [CmdletBinding()]
 param(
     [string]$HostsPath = (Join-Path $env:WINDIR 'System32\drivers\etc\hosts'),
-    [string]$BackupPath = (Join-Path $PSScriptRoot 'hosts.original'),
+    [string]$BackupPath,
     [switch]$Off,
     [switch]$Status,
     [switch]$NoFlush
 )
 
 $ErrorActionPreference = 'Stop'
+# Not a parameter default: when a script is run directly, $PSScriptRoot is empty up there.
+if (-not $BackupPath) { $BackupPath = Join-Path $PSScriptRoot 'hosts.original' }
 $Begin = '# BEGIN Local Ad Blocker'
 $End = '# END Local Ad Blocker'
 $TestName = 'securepubads.g.doubleclick.net'

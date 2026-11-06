@@ -23,6 +23,11 @@ RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 VALUE_NAME = "LocalAdBlocker"
 HOSTS_FILE = pathlib.Path(r"C:\Windows\System32\drivers\etc\hosts")
 HEALTH_WAIT_SECONDS = 20
+WINDOWS_SETTINGS_BACKUP = pathlib.Path(__file__).resolve().parent.parent / "pc-wide" / "windows-settings.backup.json"
+
+
+def all_on(checks):
+    return all(checks.values())
 
 
 class Installer:
@@ -31,6 +36,7 @@ class Installer:
         self.root = registry_root
         self.real = real_system
         self.paths = certs.paths_in(self.dir)
+        self.windows_backup = WINDOWS_SETTINGS_BACKUP if real_system else self.dir / "windows-settings.backup.json"
         self.port = app.PORT
 
     # --- Registry helpers ---
@@ -154,6 +160,7 @@ class Installer:
             "Filtering app running": self.is_running(),
             "Starts automatically with your PC": self._read(RUN_KEY, VALUE_NAME) is not None,
             "Browsers using the filtering app": self._read(INTERNET_SETTINGS, "AutoConfigURL") == self._proxy_url(),
+            "Windows ad settings turned off": self.windows_backup.exists(),
         }
         return checks
 
@@ -178,7 +185,7 @@ def main():
         checks = installer.status()
         for label, passed in checks.items():
             print(f"  [{'OK' if passed else '--'}] {label}")
-        return 0
+        return 0 if all_on(checks) else 1
     else:
         print(__doc__)
         return 2

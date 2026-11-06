@@ -252,6 +252,21 @@ class InstallTests(unittest.TestCase):
         self.installer.forget_certificates()
         self.assertFalse(self.dir.exists())
 
+    def test_status_reports_whether_the_windows_settings_step_ran(self):
+        labels = self.installer.status()
+        self.assertIn("Windows ad settings turned off", labels)
+        self.assertIs(labels["Windows ad settings turned off"], False)
+
+    def test_turn_on_does_not_say_all_done_when_a_step_failed(self):
+        text = (REPO / "Turn ON ad blocker.cmd").read_text(encoding="ascii")
+        self.assertIn('windows-ads.ps1"\r\nif errorlevel 1 goto problem', text)
+        status_line = 'install.py" status\r\nif errorlevel 1 goto problem'
+        self.assertIn(status_line, text)
+
+    def test_status_command_fails_unless_every_part_is_on(self):
+        self.assertFalse(install.all_on({"a": True, "b": False}))
+        self.assertTrue(install.all_on({"a": True, "b": True}))
+
     def test_trust_check_is_false_for_a_certificate_windows_does_not_have(self):
         self.installer.prepare()
         self.assertFalse(self.installer.is_root_trusted())

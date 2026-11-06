@@ -16,7 +16,8 @@ BLOCKED_BY_CLIENT = "net::ERR_BLOCKED_BY_CLIENT"
 
 
 class Browser:
-    def __init__(self, extension_path=None, headless=True, extra_args=()):
+    def __init__(self, extension_path=None, headless=True, extra_args=(), executable=EDGE):
+        self.executable = executable
         self.extension_path = pathlib.Path(extension_path) if extension_path else None
         self.headless = headless
         self.extra_args = list(extra_args)
@@ -30,7 +31,7 @@ class Browser:
     def __enter__(self):
         self._profile = tempfile.mkdtemp(prefix="adb_test_")
         args = [
-            EDGE, f"--user-data-dir={self._profile}", "--remote-debugging-port=0",
+            self.executable, f"--user-data-dir={self._profile}", "--remote-debugging-port=0",
             "--no-first-run", "--no-default-browser-check", "--disable-sync",
             "--disable-component-update", "--disable-background-networking",
             "--autoplay-policy=no-user-gesture-required", *self.extra_args,
