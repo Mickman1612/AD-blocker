@@ -11,6 +11,8 @@ import android.content.pm.ServiceInfo;
 import android.net.ConnectivityManager;
 import android.net.LinkProperties;
 import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
@@ -28,8 +30,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -63,22 +65,19 @@ public class FilterVpnService extends VpnService {
 
     private ParcelFileDescriptor tunnel;
     private Thread reader;
-    private volatile List<InetAddress> dnsServers = new ArrayList<>();
-    private volatile Network underlying;
+
+    /** Real networks only. The request below excludes VPNs, or lookups would be sent back into our own tunnel. */
+    private final Map<Network, LinkProperties> realNetworks = new ConcurrentHashMap<>();
 
     private final ConnectivityManager.NetworkCallback networkWatcher = new ConnectivityManager.NetworkCallback() {
         @Override
         public void onLinkPropertiesChanged(Network network, LinkProperties properties) {
-            underlying = network;
-            dnsServers = new ArrayList<>(properties.getDnsServers());
+            realNetworks.put(network, properties);
         }
 
         @Override
         public void onLost(Network network) {
-            if (network.equals(underlying)) {
-                underlying = null;
-                dnsServers = new ArrayList<>();
-            }
+            realNetworks.remove(network);
         }
     };
     private boolean watchingNetwork;
@@ -101,7 +100,6 @@ public class FilterVpnService extends VpnService {
             return START_NOT_STICKY;
         }
         // Also reached with no extras when Android's Always-on VPN setting starts this.
-        Settings.setEnabled(this, true);
         showNotification();
         if (!running && !startFiltering()) {
             Settings.setEnabled(this, false);
@@ -109,6 +107,7 @@ public class FilterVpnService extends VpnService {
             stopSelf();
             return START_NOT_STICKY;
         }
+        Settings.setEnabled(this, true);
         return START_STICKY;
     }
 
@@ -119,9 +118,12 @@ public class FilterVpnService extends VpnService {
             return false;
         }
 
-        // Running this app outside its own tunnel means its default network is the real one.
+        // Android's "default network" can be this app's own tunnel, so ask for real networks directly.
         ConnectivityManager connectivity = getSystemService(ConnectivityManager.class);
-        connectivity.registerDefaultNetworkCallback(networkWatcher);
+        connectivity.registerNetworkCallback(new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                .build(), networkWatcher);
         watchingNetwork = true;
 
         Builder builder = new Builder()
@@ -136,12 +138,16 @@ public class FilterVpnService extends VpnService {
                 .setBlocking(true);
         try {
             builder.addDisallowedApplication(getPackageName());
-        } catch (PackageManager.NameNotFoundException error) {
+            // Also needed when Android restarts this service by itself: it makes this app the active VPN.
+            if (VpnService.prepare(this) != null) {
+                return false; // The user took back the VPN permission.
+            }
+            tunnel = builder.establish();
+        } catch (PackageManager.NameNotFoundException | IllegalStateException | SecurityException error) {
             return false;
         }
-        tunnel = builder.establish();
         if (tunnel == null) {
-            return false; // The user took back the VPN permission.
+            return false;
         }
         running = true;
         reader = new Thread(this::readLoop, "filter");
@@ -188,14 +194,15 @@ public class FilterVpnService extends VpnService {
     /** Ask the phone's own DNS server, the one it would use without this app. No other server is ever used. */
     private void forward(UdpPacket request, FileOutputStream out) {
         byte[] query = request.copyPayload();
-        List<InetAddress> servers = dnsServers;
-        Network network = underlying;
-        for (InetAddress server : servers) {
+        Network network = bestNetwork();
+        LinkProperties properties = network == null ? null : realNetworks.get(network);
+        if (properties == null) {
+            return;
+        }
+        for (InetAddress server : properties.getDnsServers()) {
             try (DatagramSocket socket = new DatagramSocket()) {
                 protect(socket);
-                if (network != null) {
-                    network.bindSocket(socket);
-                }
+                network.bindSocket(socket);
                 socket.setSoTimeout(LOOKUP_TIMEOUT_MS);
                 socket.send(new DatagramPacket(query, query.length, server, DNS_PORT));
                 byte[] answer = new byte[MAX_ANSWER_BYTES];
@@ -212,6 +219,32 @@ public class FilterVpnService extends VpnService {
                 // No answer from this server, so try the next one.
             }
         }
+    }
+
+    /** The network Android would use anyway: one with working internet, preferring Wi-Fi or a cable. */
+    private Network bestNetwork() {
+        ConnectivityManager connectivity = getSystemService(ConnectivityManager.class);
+        Network best = null;
+        int bestScore = -1;
+        for (Network network : realNetworks.keySet()) {
+            NetworkCapabilities capabilities = connectivity.getNetworkCapabilities(network);
+            if (capabilities == null) {
+                continue;
+            }
+            int score = 0;
+            if (capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+                score += 2;
+            }
+            if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                    || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                score += 1;
+            }
+            if (score > bestScore) {
+                best = network;
+                bestScore = score;
+            }
+        }
+        return best;
     }
 
     private void showNotification() {
@@ -239,6 +272,7 @@ public class FilterVpnService extends VpnService {
         if (watchingNetwork) {
             getSystemService(ConnectivityManager.class).unregisterNetworkCallback(networkWatcher);
             watchingNetwork = false;
+            realNetworks.clear();
         }
         if (tunnel != null) {
             try {

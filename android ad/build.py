@@ -1,7 +1,7 @@
 """Build and test the Android app using only Python and the tools in .tools/. No Gradle.
 
 python build.py test   Run the packet logic tests on this PC
-python build.py apk    Build the installable file at dist/LocalAdBlocker.apk
+python build.py apk    Build the installable file, LocalAdBlocker.apk
 """
 import os
 import pathlib
@@ -16,7 +16,6 @@ APP = HERE / "app"
 SOURCE = APP / "src"
 CORE = SOURCE / "com" / "localadblocker" / "core"
 BUILD = HERE / "build"
-DIST = HERE / "dist"
 KEYS = HERE / ".keys"
 SDK = HERE / ".tools" / "sdk"
 PLATFORM_JAR = SDK / "platforms" / "android-36" / "android.jar"
@@ -88,7 +87,6 @@ def apk():
     clean(BUILD / "gen")
     clean(BUILD / "classes")
     clean(BUILD / "dex")
-    DIST.mkdir(exist_ok=True)
 
     resources = BUILD / "resources.zip"
     run(build_tools / "aapt2.exe", "compile", "--dir", APP / "res", "-o", resources)
@@ -110,9 +108,9 @@ def apk():
     aligned = BUILD / "aligned.apk"
     run(build_tools / "zipalign.exe", "-f", "-p", "4", base, aligned)
     store, password = signing_key()
-    final = DIST / "LocalAdBlocker.apk"
+    final = HERE / "LocalAdBlocker.apk"
     run(build_tools / "apksigner.bat", "sign", "--ks", store, "--ks-pass", f"pass:{password}",
-        "--key-pass", f"pass:{password}", "--out", final, aligned)
+        "--key-pass", f"pass:{password}", "--v4-signing-enabled", "false", "--out", final, aligned)
     print(run(build_tools / "apksigner.bat", "verify", "--print-certs", final).splitlines()[0])
     print(f"Built {final} ({final.stat().st_size // 1024} KB)")
 

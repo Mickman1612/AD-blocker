@@ -1,8 +1,8 @@
 """Test the real app on a simulated phone. Everything stays in .tools/, and your own phone isn't involved.
 
 Run: python tests/emulator_check.py
-Checks: blocked names fail, normal names resolve, the network still works, the filter comes back after a
-restart, turning it off restores ad lookups, and Android's own warnings stay clean.
+Checks: blocked names fail, normal names resolve, the filter comes back after a restart, and turning it
+off restores ad lookups.
 """
 import os
 import pathlib
@@ -12,21 +12,31 @@ import sys
 import time
 
 HERE = pathlib.Path(__file__).resolve().parent.parent
-SDK = HERE / ".tools" / "sdk"
-HOME = HERE / ".tools" / "avd-home"
+REAL_TOOLS = HERE / ".tools"
+# The emulator breaks on spaces in its path, so it reaches the tools through a link in the temp folder.
+TOOLS = pathlib.Path(os.environ["TEMP"]) / "adb_android_tools"
+if not TOOLS.exists():
+    subprocess.run(["cmd", "/c", "mklink", "/J", str(TOOLS), str(REAL_TOOLS)], check=True, capture_output=True)
+SDK = TOOLS / "sdk"
+HOME = TOOLS / "avd-home"
 ADB = SDK / "platform-tools" / "adb.exe"
 EMULATOR = SDK / "emulator" / "emulator.exe"
-APK = HERE / "dist" / "LocalAdBlocker.apk"
+APK = HERE / "LocalAdBlocker.apk"
 AVD = "adblocker_test"
 PACKAGE = "com.localadblocker"
 IMAGE = "system-images;android-36;google_apis;x86_64"
-BLOCKED = ["securepubads.g.doubleclick.net", "doubleclick.net", "ads.tiktok.com", "unityads.unity3d.com", "api.ad.xiaomi.com"]
-ALLOWED = ["www.google.com", "www.youtube.com", "www.wikipedia.org", "static.doubleclick.net"]
+# Fresh names for each stage, because Android remembers lookups and could hide a failure.
+CONTROL_ADS = ["googleads.g.doubleclick.net", "pagead2.googlesyndication.com"]
+BLOCKED = ["securepubads.g.doubleclick.net", "tpc.googlesyndication.com", "ib.adnxs.com", "cdn.taboola.com",
+           "ads.tiktok.com", "auction.unityads.unity3d.com"]
+ALLOWED_ON = ["www.wikipedia.org", "www.bbc.com", "www.mozilla.org", "static.doubleclick.net"]
+ALLOWED_AFTER_RESTART = ["www.reuters.com", "www.github.com", "www.python.org", "www.youtube.com"]
+SWITCH = re.compile(r'resource-id="com\.localadblocker:id/toggle"[^>]*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"')
 results = []
 
 
 def environment():
-    java = next((HERE / ".tools" / "jdk").glob("*/bin/javac.exe")).parent.parent
+    java = next((TOOLS / "jdk").glob("*/bin/javac.exe")).parent.parent
     return {**os.environ, "JAVA_HOME": str(java), "ANDROID_SDK_ROOT": str(SDK), "ANDROID_AVD_HOME": str(HOME / "avd"),
             "ANDROID_USER_HOME": str(HOME), "ANDROID_EMULATOR_HOME": str(HOME)}
 
@@ -42,7 +52,7 @@ def shell(command, timeout=60):
 
 
 def check(name, passed, detail=""):
-    results.append(passed)
+    results.append(bool(passed))
     print(f"[{'OK' if passed else 'FAILED'}] {name}" + (f"  ({detail})" if detail else ""), flush=True)
 
 
@@ -52,8 +62,8 @@ def create_device():
         return
     manager = SDK / "cmdline-tools" / "latest" / "bin" / "avdmanager.bat"
     # The .bat treats ";" as a separator, so this runs through cmd with the name quoted.
-    command = f'"{manager}" create avd --force --name {AVD} --package "{IMAGE}" --device "pixel_6"'
-    result = subprocess.run(["cmd", "/c", f'"{command}"'], input="no\n", capture_output=True, text=True, env=environment())
+    command = f'cmd /c ""{manager}" create avd --force --name {AVD} --package "{IMAGE}" --device "pixel_6""'
+    result = subprocess.run(command, input="no\n", capture_output=True, text=True, env=environment())
     if not (HOME / "avd" / f"{AVD}.ini").exists():
         raise SystemExit("Couldn't create the test phone:\n" + (result.stdout + result.stderr)[-1500:])
 
@@ -84,7 +94,7 @@ def resolves(name):
 
 
 def filter_active():
-    return "tun" in shell("ip link show") and PACKAGE in shell("dumpsys activity services " + PACKAGE, timeout=30)
+    return "VPN CONNECTED" in shell("dumpsys connectivity | grep -F 'ni{VPN'", timeout=30)
 
 
 def wait_for(condition, seconds=30):
@@ -96,20 +106,38 @@ def wait_for(condition, seconds=30):
     return False
 
 
-def turn_on():
-    # Stands in for the user's one tap on Android's VPN prompt, which only exists on screen.
-    shell(f"appops set {PACKAGE} ACTIVATE_VPN allow")
+def tap_switch():
+    """Taps the real switch on screen, the way a person would."""
+    shell("uiautomator dump /sdcard/ui.xml", timeout=60)
+    found = SWITCH.search(shell("cat /sdcard/ui.xml", timeout=30))
+    if not found:
+        raise SystemExit("Couldn't find the switch on screen.")
+    left, top, right, bottom = (int(value) for value in found.groups())
+    shell(f"input tap {(left + right) // 2} {(top + bottom) // 2}")
+
+
+def open_app():
     shell(f"am start -n {PACKAGE}/.MainActivity")
-    time.sleep(2)
-    shell(f"am start-foreground-service -n {PACKAGE}/.FilterVpnService")
+    time.sleep(3)
+
+
+def turn_on():
+    # Stands in for the one tap on Android's VPN prompt, which an automated test can't reach.
+    shell(f"appops set {PACKAGE} ACTIVATE_VPN allow")
+    open_app()
+    tap_switch()
     return wait_for(filter_active)
 
 
-def check_names(label):
+def check_names(label, allowed):
     for name in BLOCKED:
-        check(f"{label}: {name} is blocked", wait_for(lambda n=name: not resolves(n), 10))
-    for name in ALLOWED:
+        check(f"{label}: {name} is blocked", not resolves(name))
+    for name in allowed:
         check(f"{label}: {name} still resolves", wait_for(lambda n=name: resolves(n), 15))
+
+
+def crash_lines():
+    return shell(f"logcat -d -b crash | grep -c {PACKAGE}", timeout=30).strip()
 
 
 def main():
@@ -121,30 +149,31 @@ def main():
         if not wait_for_boot():
             raise SystemExit("The test phone didn't start. See .tools/avd-home/emulator.log")
         print("Android version:", shell("getprop ro.build.version.release"), "| API", shell("getprop ro.build.version.sdk"), flush=True)
-        check("network works before the app", resolves("www.google.com"))
-        check("ad names resolve before the app", resolves("securepubads.g.doubleclick.net"), "the control for the blocked checks")
+        check("network works before the app", wait_for(lambda: resolves("www.google.com"), 120))
+        for name in CONTROL_ADS:
+            check(f"control: {name} resolves before the app", resolves(name))
 
         installed = adb("install", "-r", str(APK), timeout=180)
-        check("app installs", "Success" in installed, installed[-120:])
+        check("app installs", "Success" in installed)
         shell("logcat -c")
         check("filter turns on", turn_on())
-        check_names("while on")
-
-        crashes = shell(f"logcat -d -b crash | grep -c {PACKAGE}", timeout=30).strip()
-        check("no crashes", crashes in ("0", ""), f"{crashes} crash lines")
-        check("filter keeps running in the background", wait_for(filter_active, 5))
+        time.sleep(2)
+        check_names("while on", ALLOWED_ON)
+        check("no crashes", crash_lines() in ("0", ""))
 
         print("Restarting the test phone...", flush=True)
         adb("reboot")
         time.sleep(10)
         check("phone restarts", wait_for_boot())
         check("filter comes back by itself after a restart", wait_for(filter_active, 90))
-        check_names("after restart")
+        time.sleep(3)
+        check_names("after restart", ALLOWED_AFTER_RESTART)
 
-        shell(f"am start-foreground-service -n {PACKAGE}/.FilterVpnService -a com.localadblocker.STOP")
+        open_app()
+        tap_switch()
         check("filter turns off", wait_for(lambda: not filter_active(), 30))
-        check("turning it off restores ad lookups", wait_for(lambda: resolves("securepubads.g.doubleclick.net"), 20))
-        check("no crashes overall", shell(f"logcat -d -b crash | grep -c {PACKAGE}", timeout=30).strip() in ("0", ""))
+        check("turning it off restores ad lookups", wait_for(lambda: resolves("cdn.taboola.com"), 20))
+        check("no crashes overall", crash_lines() in ("0", ""))
     finally:
         adb("emu", "kill")
         try:

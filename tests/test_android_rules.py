@@ -1,5 +1,6 @@
 """The phone's ad list, generated from the same hand-written rules as the PC version."""
 import pathlib
+import re
 import unittest
 
 from tools import build_rules as br
@@ -49,6 +50,46 @@ class ShippedListTests(unittest.TestCase):
         allowlist = (ASSETS / "allowlist.txt").read_text(encoding="ascii").split()
         self.assertEqual(blocklist, self.compiled["android_blocklist"], "Run python tools/build_rules.py")
         self.assertEqual(allowlist, self.compiled["android_allowlist"], "Run python tools/build_rules.py")
+
+
+class LocalOnlyTests(unittest.TestCase):
+    """The phone app's promise: it talks to nothing except the phone's own DNS server."""
+
+    SOURCE = REPO / "android ad" / "app" / "src"
+
+    def code(self):
+        return {path.name: path.read_text(encoding="utf-8") for path in self.SOURCE.rglob("*.java")}
+
+    def test_starts_no_web_or_other_connections(self):
+        for name, source in self.code().items():
+            for word in ("HttpURLConnection", "java.net.URL", "java.net.Socket", "HttpClient", "WebView", "WebSocket"):
+                self.assertNotIn(word, source, name)
+
+    def test_only_the_filter_opens_a_network_socket(self):
+        users = [name for name, source in self.code().items() if "DatagramSocket" in source]
+        self.assertEqual(users, ["FilterVpnService.java"])
+
+    def test_contains_no_outside_addresses(self):
+        for name, source in self.code().items():
+            self.assertNotRegex(source, r"https?://", name)
+            addresses = re.findall(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", source)
+            self.assertTrue(all(address.startswith("10.111.222.") for address in addresses), (name, addresses))
+
+    def test_asks_for_no_more_permissions_than_it_needs(self):
+        manifest = (REPO / "android ad" / "app" / "AndroidManifest.xml").read_text(encoding="utf-8")
+        self.assertEqual(sorted(re.findall(r'uses-permission android:name="android\.permission\.(\w+)"', manifest)), [
+            "ACCESS_NETWORK_STATE", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_SYSTEM_EXEMPTED", "INTERNET",
+            "RECEIVE_BOOT_COMPLETED"])
+
+    def test_uses_no_outside_code_libraries(self):
+        for name, source in self.code().items():
+            for line in re.findall(r"^import (?:static )?([\w.]+);", source, re.M):
+                self.assertTrue(line.startswith(("android.", "java.", "com.localadblocker.")), f"{name}: {line}")
+
+    def test_shipped_app_exists_and_is_small(self):
+        app = REPO / "android ad" / "LocalAdBlocker.apk"
+        self.assertTrue(app.exists(), "Run python build.py apk")
+        self.assertLess(app.stat().st_size, 1 << 20)
 
 
 if __name__ == "__main__":
