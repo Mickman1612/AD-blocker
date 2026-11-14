@@ -4,53 +4,65 @@ An ad blocker for this one PC. Every rule and script here was written for this p
 
 ## Turn it on
 
-Double-click **Turn ON ad blocker**. Then:
+Double-click **Turn ON ad blocker** and click **Yes** when Windows asks. The window shows the result and closes by itself. Then close and reopen your browsers.
 
-1. Click **Yes** when Windows asks.
-2. Follow the short steps it shows to add the blocker to each browser you use. You only do this once per browser.
+That's all. There's nothing to set up in each browser, and it starts by itself every time you turn on your PC. The window only stays open if something went wrong, so you can read what happened.
 
-After that, it works by itself every time you turn on your PC.
+To turn it off, double-click **Turn OFF ad blocker** and click **Yes**. That removes everything Turn ON added.
 
-To remove it, double-click **Turn OFF ad blocker**, then remove **Local Ad Blocker** from each browser's extensions page.
+Python must stay installed, and this folder must stay where it is, because the app runs from here.
 
 ## What it does
 
+No single method removes every kind of ad, so it combines three:
+
 | Part | Reaches | Removes |
 |---|---|---|
-| Browser blocker | Edge, Chrome and other Chromium browsers it's added to | Ads on websites, YouTube ads, ads in social feeds and search results, and empty ad boxes |
-| Ad server list | Every app on the PC | Ads from known ad servers, in apps as well as browsers |
+| Ad server list | Every app that uses Windows name lookups | Ads from known ad servers |
 | Windows settings | Windows itself | Promotions in Start, File Explorer, the lock screen and tips |
+| Filtering app | Every browser, and apps that follow the Windows proxy setting | YouTube ads, ads in social feeds and search results |
 
-The browser blocker works inside the browser, the way Brave's blocking does, so pages load quickly. In tests it loaded CNN in about 1.4 seconds, compared with 8 seconds or more without blocking.
+## Speed
+
+Pages pass through the filtering app as they arrive, so it doesn't hold them back. Measured on this PC:
+
+| | Without blocking | With the ad blocker |
+|---|---|---|
+| YouTube, time to first data | about 0.2 seconds | about 0.2 seconds |
+| CNN, fully loaded | 8–22 seconds | 2.4–3.1 seconds |
+| YouTube video with an ad due, until it plays | about 20 seconds, with the ad | 9–18 seconds, with no ad |
+
+Ad-heavy sites get faster, because their ads never download.
+
+## How your security is protected
+
+The filtering app needs a certificate that Windows trusts, which is the risky part of any tool like this. Here's how that risk is limited:
+
+- **Nothing new can be issued.** The certificate's private key is destroyed during setup, after signing one certificate for the listed sites. Even with full access to this PC, nobody could use it to create a certificate for your bank.
+- **Only listed sites are read.** That's YouTube, Twitch, Facebook, Instagram, X, TikTok, Pinterest, and Google, Bing and DuckDuckGo search. LinkedIn, Reddit and Yahoo reject the app's connection, so they connect directly and only their ad servers are blocked. On the listed sites, passwords and messages pass through the app on this PC.
+- **Everything else goes straight to the internet.** Banks, shopping, email and account sign-in pages never touch the app. The full rules are in `proxy/app.py`.
+- **Nothing is kept.** The app stores and logs nothing, and it only accepts connections from this PC.
+- **If it stops, browsing carries on.** Listed sites connect directly, so ads may return but sites keep working.
 
 ## What it can't do
 
-- **YouTube's wait:** when YouTube decides to show an ad, it holds the video back for roughly that ad's length even if the ad is blocked. In tests that meant 8–16 seconds, compared with about 20 seconds when the ad plays. YouTube does this on purpose, and Brave users report the same wait.
-- **Ads an app serves from its own servers,** because the ad server list can't separate those from the app's content.
+- **YouTube's wait:** when YouTube decides to show an ad, its server holds the video back for roughly that ad's length even when the ad is blocked. You see a spinner instead of the ad. YouTube does this on purpose, and Brave users report the same wait.
+- **Ads an app serves from its own servers,** when that app ignores the proxy setting.
+- **Empty ad boxes** on sites outside the list. The ad itself is gone but its space may remain. The optional browser extension hides these.
 - **Sponsored links** that go through a blocked ad server won't open.
+- **Stream-stitched ads** on some streaming services are part of the video.
 - **Sponsor segments** that creators build into their videos.
-- **Stream-stitched ads** on some streaming services are part of the video itself.
 - **No automatic updates:** this follows from using nothing external. When a platform changes how it serves ads, some can return until the rules here are updated.
 
-Some security software warns about hosts file changes, because malware also edits that file. This change only adds a marked block of ad servers.
+Some security software warns about the hosts file or certificate changes, because malware makes similar changes. These only come from running the Turn ON file.
 
-## Using the browser blocker
+## Optional: the browser extension
 
-Click its toolbar icon on any site:
-
-- **Block ads on this site:** turn this off if a site breaks.
-- **Hide something on this page:** click anything to hide it there from then on. Press Esc to cancel.
-- **Show the items you hid:** undoes those choices for that site.
-
-If Edge asks at startup whether to turn off developer-mode extensions, decline.
-
-## The retired filtering app
-
-An earlier version ran a local filtering app in `proxy/` instead of the browser blocker. It needed a trusted certificate and made YouTube slower, so Turn ON no longer uses it. Its code stays here only so that Turn OFF can remove it from PCs that still have it.
+You don't need this. It adds a pop-up with a per-site off switch, click-to-hide, and hiding of empty ad boxes on every site. To add it, double-click `optional\Load extension in browsers.cmd`, which walks you through the steps.
 
 ## Changing the rules
 
-The rules are in `rules-src/`. After editing them, run the command below, then click the reload icon on the extension's card in each browser. Run **Turn ON** again to update the ad server list.
+The rules are in `rules-src/`. After editing them, rebuild, then run **Turn ON ad blocker** again:
 
 ```bash
 python tools/build_rules.py
@@ -59,12 +71,14 @@ python tools/build_rules.py
 | File | Purpose |
 |---|---|
 | `rules-src/ad-domains.txt` | Ad network domains to block |
-| `rules-src/pc-hostnames.txt` | Exact ad hostnames for the PC-wide list, which can't match subdomains |
+| `rules-src/pc-hostnames.txt` | Exact ad hostnames for the ad server list, which can't match subdomains |
 | `rules-src/android-domains.txt` | Extra ad domains for the Android app |
 | `rules-src/url-patterns.txt` | Ad URL patterns |
-| `rules-src/surrogates.txt` | Harmless local stand-ins for ad libraries |
+| `rules-src/surrogates.txt` | Harmless local stand-ins for ad libraries, used by the extension |
 | `rules-src/cosmetic/*.txt` | Page elements to hide, one file per site |
 | `rules-src/sites.json` | Which scripts and styles apply to which sites |
+
+Per-site page logic is in `extension/content/`, and the filtering app uses those same files. To find new ad hostnames, run `python -m tests.live.harvest_hostnames`.
 
 ## Tests
 
@@ -74,10 +88,20 @@ These need only Python and Edge. Browser tests use a temporary profile, so your 
 python -m unittest discover -s tests -t .
 ```
 
-The live checks below visit real sites. For a true "without blocking" comparison, turn the ad blocker off first.
+To check that everything Turn ON sets up is in place on this PC:
+
+```bash
+python -m tests.live.installed_check
+```
+
+Live checks visit real sites, with and without blocking:
 
 ```bash
 python -m tests.live.speed_check
+```
+
+```bash
+python -m tests.live.proxy_check
 ```
 
 ```bash
@@ -87,5 +111,11 @@ python -m tests.live.youtube_compare
 ```bash
 python -m tests.live.site_check
 ```
+
+```bash
+python -m tests.live.pc_wide_check
+```
+
+Turn the ad blocker off first for a true comparison, because the "normal" side of these checks would otherwise be blocked too.
 
 The Android version is in `android ad/`, with its own README.

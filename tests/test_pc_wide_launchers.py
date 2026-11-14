@@ -24,29 +24,35 @@ class LauncherTests(unittest.TestCase):
     def elevated_lines(path):
         return [line for line in path.read_text(encoding="ascii").splitlines() if "RunAs" in line]
 
-    def test_turn_on_asks_for_administrator_rights_only_for_the_ad_server_list(self):
-        lines = self.elevated_lines(ON)
-        self.assertEqual(len(lines), 1)
-        self.assertIn("pc-wide\\hosts.ps1", lines[0])
+    def test_each_file_asks_for_administrator_rights_exactly_once(self):
+        for path in (ON, OFF):
+            lines = self.elevated_lines(path)
+            self.assertEqual(len(lines), 1, path.name)
+            self.assertIn("proxy\\elevated.ps1", lines[0], path.name)
 
-    def test_turn_off_has_one_administrator_step_that_also_removes_any_old_certificate(self):
-        lines = self.elevated_lines(OFF)
-        self.assertEqual(len(lines), 1)
-        self.assertIn("elevated.ps1", lines[0])
-
-    def test_turn_on_no_longer_starts_the_filtering_app(self):
+    def test_turn_on_starts_the_filtering_app_after_permission_is_given(self):
         text = ON.read_text(encoding="ascii")
-        self.assertNotIn('install.py" activate', text)
-        self.assertNotIn('install.py" prepare', text)
-        self.assertIn('install.py" deactivate', text, "switches off the app left by an older version")
+        self.assertIn('install.py" prepare', text)
+        self.assertLess(text.index("RunAs"), text.index('install.py" activate'))
 
-    def test_turn_on_adds_the_blocker_to_the_browsers(self):
-        self.assertIn('"%~dp0tools\\load-extension.ps1"', ON.read_text(encoding="ascii"))
+    def test_neither_file_asks_the_user_anything_when_all_goes_well(self):
+        for path in (ON, OFF):
+            text = path.read_text(encoding="ascii")
+            success = text.split(":declined")[0]
+            for question in ("pause", "set /p", "Read-Host", "load-extension", "choice "):
+                self.assertNotIn(question, success, f"{path.name}: {question}")
+            self.assertIn("timeout /t", success, f"{path.name} closes by itself")
 
     def test_turn_on_checks_each_step_before_saying_it_worked(self):
         text = ON.read_text(encoding="ascii")
         self.assertIn('windows-ads.ps1"\nif errorlevel 1 goto problem', text)
-        self.assertIn('hosts.ps1" -Status\nif errorlevel 1 goto declined', text)
+        self.assertIn('install.py" activate\nif errorlevel 1 goto declined', text)
+        self.assertIn('install.py" status\nif errorlevel 1 goto problem', text)
+
+    def test_problems_keep_the_window_open_so_they_can_be_read(self):
+        for path in (ON, OFF):
+            text = path.read_text(encoding="ascii")
+            self.assertIn("pause", text.split(":declined")[1], path.name)
 
     def elevated_arguments(self, launcher):
         """What the elevated PowerShell would receive, run from a folder with a space in its name."""
@@ -58,9 +64,10 @@ class LauncherTests(unittest.TestCase):
             result = subprocess.run(["cmd", "/c", str(copy)], capture_output=True, text=True, timeout=60)
             return result.stdout, tmp
 
-    def test_turn_on_passes_the_script_path_intact(self):
+    def test_turn_on_passes_both_paths_intact(self):
         output, folder = self.elevated_arguments(ON)
-        self.assertIn(f'-File "{folder}\\pc-wide\\hosts.ps1"', output)
+        self.assertIn(f'-File "{folder}\\proxy\\elevated.ps1" -CaPath "', output)
+        self.assertIn('LocalAdBlocker\\ca.cer"', output)
 
     def test_turn_off_passes_the_off_switch(self):
         output, _ = self.elevated_arguments(OFF)

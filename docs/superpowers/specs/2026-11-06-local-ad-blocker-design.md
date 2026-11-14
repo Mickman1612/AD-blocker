@@ -43,7 +43,7 @@ The user widened the goal from browsers to the entire PC.
 
 **Known cost:** the hosts file can't tell an ad from the page you asked for, so clicking a sponsored link that goes through a blocked ad domain fails, which the extension's rules would otherwise allow.
 
-## Speed decision (added 2026-11-14, retires the auto-start app below)
+## Speed decision (added 2026-11-14)
 
 The user found YouTube and ad-heavy sites slow, and wanted it to feel like Brave. Measured with `tests/live/speed_check.py`, on cached pages:
 
@@ -55,11 +55,13 @@ The user found YouTube and ad-heavy sites slow, and wanted it to feel like Brave
 
 **Root cause of the reported slowness:** the filtering app held each page back until it had fully downloaded before adding its scripts. That delayed YouTube's first byte from about 0.2s to 1.4s, and the problem is now fixed by streaming. The app was still slower on YouTube than blocking inside the browser, because every YouTube request went through Python over HTTP/1.1.
 
-**Decision:** Turn ON now sets up the browser extension, the hosts file and Windows settings, and no longer starts the filtering app. This also removes the trusted certificate. The cost is one manual extension load per browser. Chromium won't force-install an extension from outside its store on an unmanaged Windows PC, so that step can't be automated.
+**First decision, reversed the same day:** Turn ON briefly set up the browser extension instead of the filtering app. That needed one manual extension load per browser, because Chromium won't force-install an extension from outside its store on an unmanaged Windows PC. The user rejected it: they want one click that covers the whole PC, with no browser steps and no questions.
+
+**Decision:** Turn ON starts the stream-fixed filtering app again. With streaming, YouTube's first byte through the app is about 0.17s, close to no blocking, and CNN fully loads in 2.4–3.1s compared with 8–22s without blocking. Both launchers ask only for Windows' permission, report the result, and close by themselves. The window stays open only when a step fails. The extension remains optional.
 
 **Video waits:** with an ad due, Edge videos started after 8–16s with in-browser blocking, 9–18s through the app, and about 20s with no blocking. This is YouTube's deliberate delay for ad-blocker users, and Brave is reported to hit it too.
 
-## Auto-start app (added 2026-11-06, retired 2026-11-14)
+## Auto-start app (added 2026-11-06, the default again since 2026-11-14)
 
 The user found the extension's manual steps too many and asked for an app that starts with the PC. Chrome and Edge won't force-install off-store extensions on an unmanaged PC, so a local proxy is the only way to reach YouTube's ads without browser steps. It is contained as follows:
 
