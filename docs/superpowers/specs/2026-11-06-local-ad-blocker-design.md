@@ -43,7 +43,23 @@ The user widened the goal from browsers to the entire PC.
 
 **Known cost:** the hosts file can't tell an ad from the page you asked for, so clicking a sponsored link that goes through a blocked ad domain fails, which the extension's rules would otherwise allow.
 
-## Auto-start app (added 2026-11-06, replaces the proxy decision above)
+## Speed decision (added 2026-11-14, retires the auto-start app below)
+
+The user found YouTube and ad-heavy sites slow, and wanted it to feel like Brave. Measured with `tests/live/speed_check.py`, on cached pages:
+
+| Page, first paint / fully loaded (ms) | No blocking | Filtering app | In-browser |
+|---|---|---|---|
+| YouTube home | 368 / 1178 | 1568 / 1440 | 328 / 1022 |
+| YouTube video page | 1364 / 3553 | 1840 / 2854 | 1456 / 1748 |
+| CNN | 320 / 8037 | 332 / 2449 | 264 / 1410 |
+
+**Root cause of the reported slowness:** the filtering app held each page back until it had fully downloaded before adding its scripts. That delayed YouTube's first byte from about 0.2s to 1.4s, and the problem is now fixed by streaming. The app was still slower on YouTube than blocking inside the browser, because every YouTube request went through Python over HTTP/1.1.
+
+**Decision:** Turn ON now sets up the browser extension, the hosts file and Windows settings, and no longer starts the filtering app. This also removes the trusted certificate. The cost is one manual extension load per browser. Chromium won't force-install an extension from outside its store on an unmanaged Windows PC, so that step can't be automated.
+
+**Video waits:** with an ad due, Edge videos started after 8–16s with in-browser blocking, 9–18s through the app, and about 20s with no blocking. This is YouTube's deliberate delay for ad-blocker users, and Brave is reported to hit it too.
+
+## Auto-start app (added 2026-11-06, retired 2026-11-14)
 
 The user found the extension's manual steps too many and asked for an app that starts with the PC. Chrome and Edge won't force-install off-store extensions on an unmanaged PC, so a local proxy is the only way to reach YouTube's ads without browser steps. It is contained as follows:
 

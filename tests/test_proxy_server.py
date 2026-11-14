@@ -9,6 +9,7 @@ import ssl
 import tempfile
 import threading
 import unittest
+import zlib
 
 from proxy import certs
 from proxy.server import ProxyConfig, ProxyServer, inject_into_html, patch_csp, build_pac
@@ -192,7 +193,64 @@ class DecryptedTrafficTests(ProxyTestCase):
         reader, writer = await self.open_decrypted()
         head, headers, body = await self.fetch(reader, writer, "/watch", ["Sec-Fetch-Dest: document"])
         self.assertTrue(body.startswith(b"<html><head>" + SNIPPET + b"<title>"), body[:90])
-        self.assertEqual(int(headers["content-length"]), len(body))
+        self.assertTrue(headers.get("transfer-encoding") == "chunked" or int(headers["content-length"]) == len(body))
+        writer.close()
+
+    async def streaming_page(self, encode=lambda part: part, encoding_header=()):
+        """The site sends the start of the page, then holds the rest until the test releases it."""
+        release = asyncio.Event()
+
+        async def slow_page(reader, writer):
+            writer.write(("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nTransfer-Encoding: chunked\r\n"
+                          + "".join(f"{h}\r\n" for h in encoding_header) + "\r\n").encode())
+            first, rest = encode(b"<html><head><title>t</title>", b"</head><body>the rest</body></html>")
+            writer.write(chunked(first)[:-5])
+            await writer.drain()
+            await release.wait()
+            writer.write(b"%x\r\n%s\r\n0\r\n\r\n" % (len(rest), rest))
+            await writer.drain()
+            writer.close()
+
+        self.upstream.replies["/slow"] = slow_page
+        reader, writer = await self.open_decrypted()
+        writer.write(f"GET /slow HTTP/1.1\r\nHost: {UPSTREAM_HOST}\r\nSec-Fetch-Dest: document\r\n\r\n".encode())
+        await writer.drain()
+        # Our scripts and the start of the page arrive while the site is still sending.
+        start = await asyncio.wait_for(reader.readuntil(b"<title>"), 3)
+        self.assertIn(SNIPPET, start)
+        release.set()
+        rest = await asyncio.wait_for(reader.readuntil(b"0\r\n\r\n"), 5)
+        self.assertIn(b"the rest", rest)
+        writer.close()
+
+    async def test_page_starts_arriving_before_the_site_finishes_sending_it(self):
+        await self.streaming_page(lambda first, rest: (first, rest))
+
+    async def test_gzipped_page_starts_arriving_before_the_site_finishes_sending_it(self):
+        compressor = zlib.compressobj(wbits=31)
+
+        def encode(first, rest):
+            return (compressor.compress(first) + compressor.flush(zlib.Z_SYNC_FLUSH),
+                    compressor.compress(rest) + compressor.flush())
+
+        await self.streaming_page(encode, ["Content-Encoding: gzip"])
+
+    async def test_page_with_no_head_tag_still_gets_our_scripts_after_the_doctype(self):
+        page = b"<!doctype html>" + b"<p>x</p>" * 20000
+        self.upstream.replies["/nohead"] = response(page, headers=["Content-Type: text/html"])
+        reader, writer = await self.open_decrypted()
+        _, _, body = await self.fetch(reader, writer, "/nohead", ["Sec-Fetch-Dest: document"])
+        self.assertTrue(body.startswith(b"<!doctype html>" + SNIPPET), body[:60])
+        self.assertEqual(len(body), len(page) + len(SNIPPET))
+        writer.close()
+
+    async def test_corrupt_compressed_page_is_passed_on_untouched(self):
+        broken = b"\x1f\x8b\x08\x00 this is not really gzip"
+        self.upstream.replies["/broken"] = response(broken, headers=["Content-Type: text/html", "Content-Encoding: gzip"])
+        reader, writer = await self.open_decrypted()
+        _, headers, body = await self.fetch(reader, writer, "/broken", ["Sec-Fetch-Dest: document"])
+        self.assertEqual(body, broken)
+        self.assertEqual(headers.get("content-encoding"), "gzip")
         writer.close()
 
     async def test_gzipped_page_is_handled(self):
@@ -210,8 +268,8 @@ class DecryptedTrafficTests(ProxyTestCase):
             "Content-Type: text/html", "Transfer-Encoding: chunked"])
         reader, writer = await self.open_decrypted()
         _, headers, body = await self.fetch(reader, writer, "/chunked", ["Sec-Fetch-Dest: document"])
-        self.assertIn(SNIPPET, body)
-        self.assertNotIn("transfer-encoding", headers)
+        # The head tag arrived split across two pieces, and our scripts still go right after it.
+        self.assertEqual(body, b"<html><head>" + SNIPPET + b"</head>hi</html>")
         writer.close()
 
     async def test_everything_else_passes_through_unchanged(self):

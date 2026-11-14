@@ -20,11 +20,33 @@ class LauncherTests(unittest.TestCase):
             data = path.read_bytes()
             self.assertEqual(data.count(b"\n"), data.count(b"\r\n"), path.name)
 
-    def test_there_is_exactly_one_administrator_step(self):
-        for path in (ON, OFF):
-            elevated = [line for line in path.read_text(encoding="ascii").splitlines() if "RunAs" in line]
-            self.assertEqual(len(elevated), 1, path.name)
-            self.assertIn("elevated.ps1", elevated[0])
+    @staticmethod
+    def elevated_lines(path):
+        return [line for line in path.read_text(encoding="ascii").splitlines() if "RunAs" in line]
+
+    def test_turn_on_asks_for_administrator_rights_only_for_the_ad_server_list(self):
+        lines = self.elevated_lines(ON)
+        self.assertEqual(len(lines), 1)
+        self.assertIn("pc-wide\\hosts.ps1", lines[0])
+
+    def test_turn_off_has_one_administrator_step_that_also_removes_any_old_certificate(self):
+        lines = self.elevated_lines(OFF)
+        self.assertEqual(len(lines), 1)
+        self.assertIn("elevated.ps1", lines[0])
+
+    def test_turn_on_no_longer_starts_the_filtering_app(self):
+        text = ON.read_text(encoding="ascii")
+        self.assertNotIn('install.py" activate', text)
+        self.assertNotIn('install.py" prepare', text)
+        self.assertIn('install.py" deactivate', text, "switches off the app left by an older version")
+
+    def test_turn_on_adds_the_blocker_to_the_browsers(self):
+        self.assertIn('"%~dp0tools\\load-extension.ps1"', ON.read_text(encoding="ascii"))
+
+    def test_turn_on_checks_each_step_before_saying_it_worked(self):
+        text = ON.read_text(encoding="ascii")
+        self.assertIn('windows-ads.ps1"\nif errorlevel 1 goto problem', text)
+        self.assertIn('hosts.ps1" -Status\nif errorlevel 1 goto declined', text)
 
     def elevated_arguments(self, launcher):
         """What the elevated PowerShell would receive, run from a folder with a space in its name."""
@@ -36,10 +58,9 @@ class LauncherTests(unittest.TestCase):
             result = subprocess.run(["cmd", "/c", str(copy)], capture_output=True, text=True, timeout=60)
             return result.stdout, tmp
 
-    def test_turn_on_passes_both_paths_intact(self):
+    def test_turn_on_passes_the_script_path_intact(self):
         output, folder = self.elevated_arguments(ON)
-        self.assertIn(f'-File "{folder}\\proxy\\elevated.ps1" -CaPath "', output)
-        self.assertIn('LocalAdBlocker\\ca.cer"', output)
+        self.assertIn(f'-File "{folder}\\pc-wide\\hosts.ps1"', output)
 
     def test_turn_off_passes_the_off_switch(self):
         output, _ = self.elevated_arguments(OFF)
@@ -49,10 +70,6 @@ class LauncherTests(unittest.TestCase):
         for name in ("pc-wide/hosts.ps1", "pc-wide/windows-ads.ps1", "pc-wide/hosts-block.txt",
                      "proxy/elevated.ps1", "proxy/install.py", "proxy/run.py"):
             self.assertTrue((REPO / name).exists(), name)
-
-    def test_turning_on_waits_for_permission_before_redirecting_browsers(self):
-        text = ON.read_text(encoding="ascii")
-        self.assertLess(text.index("RunAs"), text.index("install.py\" activate"))
 
     def test_optional_extension_helper_runs_the_guided_script(self):
         self.assertIn('"%~dp0..\\tools\\load-extension.ps1"', LOAD.read_text(encoding="ascii"))

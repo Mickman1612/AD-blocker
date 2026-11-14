@@ -7,7 +7,6 @@ paths with nothing. All other traffic that reaches it passes through without bei
 import asyncio
 import base64
 import dataclasses
-import gzip
 import hashlib
 import json
 import re
@@ -17,7 +16,7 @@ import zlib
 
 READ_LIMIT = 1 << 20
 CHUNK = 1 << 16
-MAX_PAGE_BYTES = 32 << 20
+INJECT_SEARCH_BYTES = 1 << 16  # How far into a page to look for its head tag.
 MAX_BUFFERED_REQUEST = 8 << 20
 CONNECT_TIMEOUT = 15
 INJECT_DESTINATIONS = {"document", "iframe", "frame"}
@@ -160,6 +159,40 @@ async def _read_chunked(reader):
             return b"".join(parts)
         parts.append(await reader.readexactly(size))
         await reader.readexactly(2)
+
+
+def _chunk(data):
+    return b"%x\r\n%s\r\n" % (len(data), data) if data else b""
+
+
+async def _body_pieces(reader, chunked, length):
+    """The response body as it arrives, without its transfer framing."""
+    if chunked:
+        while True:
+            size = int((await reader.readline()).split(b";")[0].strip() or b"0", 16)
+            if size == 0:
+                while (await reader.readline()).strip():
+                    pass
+                return
+            remaining = size
+            while remaining:
+                data = await reader.read(min(remaining, CHUNK))
+                if not data:
+                    raise ConnectionError("connection ended early")
+                remaining -= len(data)
+                yield data
+            await reader.readexactly(2)
+    elif length is not None:
+        remaining = int(length)
+        while remaining:
+            data = await reader.read(min(remaining, CHUNK))
+            if not data:
+                raise ConnectionError("connection ended early")
+            remaining -= len(data)
+            yield data
+    else:
+        while data := await reader.read(CHUNK):
+            yield data
 
 
 async def _relay_exact(reader, writer, remaining):
@@ -458,17 +491,11 @@ class ProxyServer:
         chunked = _is_chunked(fields)
         length = _field(fields, "content-length")
 
-        if self._wants_injection(method, code, request_fields, fields, length):
-            if chunked:
-                body = await _read_chunked(upstream_reader)
-            elif length is not None:
-                body = await upstream_reader.readexactly(int(length))
-            else:
-                body = await upstream_reader.read(-1)
-                closing = True
-            writer.write(self._inject(host, status_line, fields, body))
-            await writer.drain()
-            return False, not closing
+        if self._wants_injection(method, code, request_fields, fields):
+            pieces = _body_pieces(upstream_reader, chunked, length)
+            await self._stream_injected(host, status_line, fields, pieces, writer)
+            # A body that ends when the connection closes leaves nothing to reuse.
+            return False, not closing and (chunked or length is not None)
 
         writer.write(response_head)
         await writer.drain()
@@ -483,42 +510,71 @@ class ProxyServer:
             return False, False
         return False, not closing
 
-    def _wants_injection(self, method, code, request_fields, fields, length):
+    def _wants_injection(self, method, code, request_fields, fields):
         if self.config.page_snippet is None or method != "GET" or code != "200":
             return False
         if (_field(request_fields, "sec-fetch-dest") or "").lower() not in INJECT_DESTINATIONS:
             return False
         if "text/html" not in (_field(fields, "content-type") or "").lower():
             return False
-        if (_field(fields, "content-encoding") or "identity").lower() not in ("identity", "gzip", "x-gzip", "deflate"):
-            return False
-        return length is None or int(length) <= MAX_PAGE_BYTES
+        return (_field(fields, "content-encoding") or "identity").lower() in ("identity", "gzip", "x-gzip", "deflate")
 
-    def _inject(self, host, status_line, fields, body):
+    async def _stream_injected(self, host, status_line, fields, pieces, writer):
+        """Pass the page on as it arrives, adding our scripts once the head tag has been seen.
+        Holding the whole page back first delayed YouTube's first paint by over a second."""
         encoding = (_field(fields, "content-encoding") or "identity").lower()
-        try:
-            if encoding in ("gzip", "x-gzip"):
-                page = gzip.decompress(body)
-            elif encoding == "deflate":
-                page = zlib.decompress(body)
-            else:
-                page = body
-            snippet = self.config.page_snippet(host)
-        except (OSError, EOFError, zlib.error):
-            snippet = None
-        if not snippet:
-            # Leave the page as the site sent it.
-            kept = _without(fields, "transfer-encoding", "content-length") + [("Content-Length", str(len(body)))]
-            return _build_head(status_line, kept) + body
+        decoder = None
+        if encoding in ("gzip", "x-gzip"):
+            decoder = zlib.decompressobj(wbits=31)
+        elif encoding == "deflate":
+            decoder = zlib.decompressobj()
+        code, script_hash, style_hash = self.config.page_snippet(host)
 
-        code, script_hash, style_hash = snippet
-        page = inject_into_html(page, code)
-        kept = _without(fields, "transfer-encoding", "content-length", "content-encoding",
-                        "content-security-policy") + [("Content-Length", str(len(page)))]
+        kept = _without(fields, "transfer-encoding", "content-length", "content-encoding", "content-security-policy")
         for key, value in fields:
             if key.lower() == "content-security-policy":
                 kept.append((key, patch_csp(value, script_hash, style_hash)))
-        return _build_head(status_line, kept) + page
+        kept.append(("Transfer-Encoding", "chunked"))
+
+        head_sent = injected = False
+        pending = b""
+        async for raw in pieces:
+            try:
+                data = decoder.decompress(raw) if decoder else raw
+            except zlib.error:
+                if head_sent:
+                    raise ConnectionError("page stopped decoding part-way")
+                await self._pass_through(status_line, fields, raw, pieces, writer)
+                return
+            if not head_sent:
+                writer.write(_build_head(status_line, kept))
+                head_sent = True
+            if injected:
+                writer.write(_chunk(data))
+            else:
+                pending += data
+                if _HEAD_TAG.search(pending) or len(pending) >= INJECT_SEARCH_BYTES:
+                    writer.write(_chunk(inject_into_html(pending, code)))
+                    pending, injected = b"", True
+            await writer.drain()
+
+        tail = decoder.flush() if decoder else b""
+        if not head_sent:
+            writer.write(_build_head(status_line, kept))
+        writer.write(_chunk(tail) if injected else _chunk(inject_into_html(pending + tail, code)))
+        writer.write(b"0\r\n\r\n")
+        await writer.drain()
+
+    async def _pass_through(self, status_line, fields, first, pieces, writer):
+        """The page couldn't be decoded, so send it on exactly as the site sent it."""
+        writer.write(_build_head(status_line, _without(fields, "transfer-encoding", "content-length")
+                                 + [("Transfer-Encoding", "chunked")]))
+        writer.write(_chunk(first))
+        async for raw in pieces:
+            writer.write(_chunk(raw))
+            await writer.drain()
+        writer.write(b"0\r\n\r\n")
+        await writer.drain()
 
 
 def inline_hash(text):

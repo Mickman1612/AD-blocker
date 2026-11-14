@@ -206,8 +206,18 @@ class RunExactlyLikeTheDoubleClickFilesTests(unittest.TestCase):
     def test_hosts_status_runs_directly(self):
         self.copy_in("hosts.ps1", "hosts-block.txt")
         result = powershell(self.folder / "hosts.ps1", "-Status")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(result.returncode, (0, 3), result.stdout + result.stderr)
         self.assertIn("PC-wide blocking is", result.stdout)
+
+    def test_hosts_status_reports_failure_when_off_so_turn_on_can_notice(self):
+        self.copy_in("hosts.ps1", "hosts-block.txt")
+        hosts = self.folder / "hosts"
+        hosts.write_bytes(b"# x\r\n")
+        off = powershell(self.folder / "hosts.ps1", "-HostsPath", str(hosts), "-Status")
+        self.assertEqual(off.returncode, 3, off.stdout)
+        powershell(self.folder / "hosts.ps1", "-HostsPath", str(hosts), "-NoFlush")
+        on = powershell(self.folder / "hosts.ps1", "-HostsPath", str(hosts), "-Status")
+        self.assertEqual(on.returncode, 0, on.stdout)
 
 
 def read_value(subkey, name):

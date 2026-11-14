@@ -1,5 +1,6 @@
 """Drive real Edge with a throwaway profile. The user's own profiles are never touched."""
 import base64
+import hashlib
 import json
 import pathlib
 import re
@@ -13,6 +14,15 @@ from .cdp import Cdp
 
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 BLOCKED_BY_CLIENT = "net::ERR_BLOCKED_BY_CLIENT"
+
+
+def unpacked_extension_id(path):
+    """The ID Chromium gives an extension loaded from a folder: a hash of the folder's path."""
+    text = str(pathlib.Path(path).resolve())
+    if len(text) >= 2 and text[1] == ":":
+        text = text[0].upper() + text[1:]
+    digest = hashlib.sha256(text.encode("utf-16-le")).hexdigest()[:32]
+    return "".join(chr(ord("a") + int(character, 16)) for character in digest)
 
 
 class Browser:
@@ -64,7 +74,10 @@ class Browser:
             except subprocess.TimeoutExpired:
                 subprocess.run(["taskkill", "/PID", str(self._proc.pid), "/T", "/F"],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                self._proc.wait(timeout=5)
+                try:
+                    self._proc.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    pass  # Windows is still tearing it down. The next run uses a fresh profile anyway.
         for _attempt in range(10):
             shutil.rmtree(self._profile, ignore_errors=True)
             if not pathlib.Path(self._profile).exists():
@@ -86,13 +99,15 @@ class Browser:
 
     def _attach_service_worker(self):
         manifest = json.loads((self.extension_path / "manifest.json").read_text(encoding="utf-8"))
+        # Built-in browser extensions can use the same script name, so match on our own ID.
+        expected = f"chrome-extension://{unpacked_extension_id(self.extension_path)}/"
         self._sw_url_suffix = "/" + manifest["background"]["service_worker"]
         deadline = time.time() + 20
         while time.time() < deadline:
             targets = self.cdp.send("Target.getTargets", {"filter": [{"type": "service_worker"}]})
             for info in targets["targetInfos"]:
                 url = info["url"]
-                if url.startswith("chrome-extension://") and url.endswith(self._sw_url_suffix):
+                if url.startswith(expected) and url.endswith(self._sw_url_suffix):
                     self.extension_id = url.split("/")[2]
                     attached = self.cdp.send("Target.attachToTarget",
                                              {"targetId": info["targetId"], "flatten": True})

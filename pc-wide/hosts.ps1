@@ -41,7 +41,8 @@ function Show-Status {
 try {
     if ($Status) {
         Show-Status
-        exit 0
+        # 3 means off, so the double-click file can tell when the permission step didn't happen.
+        if ((Read-Hosts).Contains($Begin)) { exit 0 } else { exit 3 }
     }
 
     $current = Read-Hosts
