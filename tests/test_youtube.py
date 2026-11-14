@@ -58,6 +58,13 @@ class ResponseScrubbingTests(YoutubeTestCase):
         page = self.open(f"<script>var ytInitialPlayerResponse = {json.dumps(PLAYER_RESPONSE)};</script>")
         self.assert_clean(page.eval("window.ytInitialPlayerResponse"))
 
+    def test_the_next_script_already_reads_clean_data(self):
+        # YouTube hands the data to its player from a later script, as here.
+        page = self.open(f"""<script>var ytInitialPlayerResponse = {json.dumps(PLAYER_RESPONSE)};
+            var meta = document.createElement('meta'); document.head.appendChild(meta);</script>
+            <script>window.handedOver = JSON.stringify(window['ytInitialPlayerResponse']);</script>""")
+        self.assert_clean(json.loads(page.eval("window.handedOver")))
+
     def test_inline_page_data_loses_ad_items_and_keeps_videos(self):
         data = {"contents": [{"adSlotRenderer": {}}, {"richItemRenderer": {"id": "v1"}},
                              {"promotedSparklesWebRenderer": {}}]}
@@ -134,9 +141,18 @@ class ResponseScrubbingTests(YoutubeTestCase):
         page = self.open(**{r"youtube\.com/api/other": (body, CORS_JSON)})
         self.assertEqual(page.eval("fetch('/api/other').then(r => r.text())"), body)
 
-    def test_anti_adblock_message_is_removed(self):
+    def test_anti_adblock_message_data_is_left_for_the_player(self):
+        # Without it, YouTube's player refuses to play for flagged accounts: "Something went
+        # wrong", 282054944. Its pop-up is hidden by the page styles instead.
         page = self.open(f"<script>var ytInitialPlayerResponse = {json.dumps(PLAYER_RESPONSE)};</script>")
-        self.assertNotIn("bkaEnforcementMessageViewModel", json.dumps(page.eval("window.ytInitialPlayerResponse")))
+        data = page.eval("window.ytInitialPlayerResponse")
+        self.assertEqual(data["auxiliaryUi"], PLAYER_RESPONSE["auxiliaryUi"])
+        self.assert_clean(data)
+
+    def test_anti_adblock_message_survives_in_fetched_data(self):
+        page = self.open(**{PLAYER_URL: (json.dumps(PLAYER_RESPONSE), CORS_JSON)})
+        data = page.eval("fetch('/youtubei/v1/player').then(r => r.json())")
+        self.assertEqual(data["auxiliaryUi"], PLAYER_RESPONSE["auxiliaryUi"])
 
     def test_hooks_do_not_run_on_other_sites(self):
         page = self.open(url="https://www.example.test/")
@@ -198,6 +214,56 @@ class VideoGuardTests(YoutubeTestCase):
         self.assertFalse(page.eval("document.querySelector('#v').muted"))
         self.assertLess(page.eval("document.querySelector('#v').currentTime"), 4)
         self.assertFalse(page.eval("window.skipped === true"))
+
+
+class AdBlockerWarningTests(YoutubeTestCase):
+    """YouTube's "ad blockers aren't allowed" pop-up pauses the video behind it. Its data can't
+    be removed (the player then refuses to play), so it is closed and the video carries on."""
+
+    # Built the way YouTube opens it: the dialog is added, then the video is paused.
+    WARNING = """
+        const dialog = document.createElement('tp-yt-paper-dialog');
+        dialog.innerHTML = `<ytd-enforcement-message-view-model>
+            <button aria-label="Close" id=close>x</button>
+            <button id=allow onclick="window.allowedAds = true">Allow YouTube Ads</button>
+        </ytd-enforcement-message-view-model>`;
+        dialog.querySelector('#close').addEventListener('click', () => {
+            window.warningClosed = (window.warningClosed || 0) + 1;
+            dialog.setAttribute('aria-hidden', 'true');
+            dialog.style.display = 'none';
+        });
+        document.body.appendChild(dialog);
+        document.querySelector('#v').pause();
+    """
+
+    def open_playing(self):
+        page = self.open(VideoGuardTests.PLAYER, **{r"fake\.wav": (silent_wav(30), {"Content-Type": "audio/wav"})})
+        page.wait_for("document.querySelector('#v').currentTime > 0.2")
+        return page
+
+    def test_warning_is_closed_and_the_video_carries_on(self):
+        page = self.open_playing()
+        page.eval(self.WARNING)
+        page.wait_for("window.warningClosed === 1")
+        page.wait_for("!document.querySelector('#v').paused")
+        self.assertFalse(page.eval("window.allowedAds === true"))
+
+    def test_a_video_the_viewer_pauses_afterwards_stays_paused(self):
+        page = self.open_playing()
+        page.eval(self.WARNING)
+        page.wait_for("!document.querySelector('#v').paused && window.warningClosed === 1")
+        page.eval("document.querySelector('#v').pause()")
+        time_paused = page.eval("document.querySelector('#v').currentTime")
+        page.eval("new Promise(done => setTimeout(done, 3000))", timeout=10)
+        self.assertTrue(page.eval("document.querySelector('#v').paused"))
+        self.assertEqual(page.eval("window.warningClosed"), 1)
+        self.assertAlmostEqual(page.eval("document.querySelector('#v').currentTime"), time_paused, places=1)
+
+    def test_a_paused_video_without_the_warning_stays_paused(self):
+        page = self.open_playing()
+        page.eval("document.querySelector('#v').pause()")
+        page.eval("new Promise(done => setTimeout(done, 2000))", timeout=10)
+        self.assertTrue(page.eval("document.querySelector('#v').paused"))
 
 
 class AntiDetectionTests(YoutubeTestCase):

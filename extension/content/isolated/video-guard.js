@@ -35,6 +35,13 @@
         '.ytp-skip-ad-button', '.ytp-ad-skip-button', '.ytp-ad-skip-button-modern',
         '.ytp-ad-skip-button-slot button', '.ytp-ad-overlay-close-button',
       ],
+      // The "ad blockers aren't allowed" pop-up pauses the video behind it. Its data can't be
+      // removed, because the player then refuses to play, so close it and carry on. Only ever
+      // its close button: never "Allow YouTube Ads".
+      warning: {
+        message: 'ytd-enforcement-message-view-model',
+        close: 'button[aria-label="Close"], #dismiss-button button',
+      },
     },
   ];
 
@@ -96,7 +103,35 @@
     else restore(video);
   }
 
+  const closedWarnings = new WeakSet();
+  let resumeAfterWarning = false;
+
+  function isOpen(message) {
+    const dialog = message.closest('tp-yt-paper-dialog') ?? message;
+    return dialog.getAttribute('aria-hidden') !== 'true' && dialog.style.display !== 'none';
+  }
+
+  function closeWarning() {
+    for (const message of document.querySelectorAll(site.warning.message)) {
+      if (!isOpen(message)) {
+        closedWarnings.delete(message); // So it's closed again if the page reopens it.
+        continue;
+      }
+      if (closedWarnings.has(message)) continue;
+      closedWarnings.add(message);
+      message.querySelector(site.warning.close)?.click();
+      resumeAfterWarning = true;
+    }
+    if (!resumeAfterWarning) return;
+    const video = document.querySelector(`${site.player} video`);
+    if (!video) return;
+    // Only once: any later pause is the viewer's own.
+    resumeAfterWarning = false;
+    if (video.paused) video.play().catch(() => {});
+  }
+
   function check() {
+    if (site.warning) closeWarning();
     for (const player of document.querySelectorAll(site.player)) {
       if (!observed.has(player)) {
         observed.add(player);

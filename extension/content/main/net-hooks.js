@@ -9,10 +9,9 @@
       domains: ['youtube.com', 'youtube-nocookie.com', 'youtubekids.com'],
       urls: /\/youtubei\/v1\/|\/watch\?|\/playlist\?|\/shorts\//,
       globals: ['ytInitialPlayerResponse', 'ytInitialData', 'ytInitialReelWatchSequenceResponse'],
-      dropKeys: [
-        'adPlacements', 'adSlots', 'playerAds', 'adBreakHeartbeatParams',
-        'bkaEnforcementMessageViewModel', 'enforcementMessageViewModel',
-      ],
+      // The "ad blockers aren't allowed" message stays in the data: without it, YouTube's player
+      // refuses to play for flagged accounts ("Something went wrong", 282054944).
+      dropKeys: ['adPlacements', 'adSlots', 'playerAds', 'adBreakHeartbeatParams'],
       dropItemKeys: [
         'adSlotRenderer', 'promotedSparklesWebRenderer', 'promotedVideoRenderer',
         'compactPromotedVideoRenderer', 'displayAdRenderer', 'inFeedAdLayoutRenderer',

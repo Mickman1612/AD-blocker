@@ -47,6 +47,7 @@ The filtering app needs a certificate that Windows trusts, which is the risky pa
 ## What it can't do
 
 - **YouTube's wait:** when YouTube decides to show an ad, its server holds the video back for roughly that ad's length even when the ad is blocked. You see a spinner instead of the ad. YouTube does this on purpose, and Brave users report the same wait.
+- **YouTube's "ad blockers aren't allowed" message:** once YouTube flags an account, it sends this message with every video. Its data has to stay, because without it YouTube refuses to play ("Something went wrong"). When it pops up, the blocker closes it and the video carries on. YouTube could make this stricter at any time.
 - **Ads an app serves from its own servers,** when that app ignores the proxy setting.
 - **Empty ad boxes** on sites outside the list. The ad itself is gone but its space may remain. The optional browser extension hides these.
 - **Sponsored links** that go through a blocked ad server won't open.
