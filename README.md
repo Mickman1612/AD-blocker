@@ -1,5 +1,7 @@
 # Local Ad Blocker
 
+![Local Ad Blocker: one click blocks ads across your whole Windows PC, YouTube included. No filter lists, no telemetry, nothing leaves your PC.](docs/social-preview.png)
+
 **A private, one-click ad blocker for your whole Windows PC, YouTube included.**
 No filter lists, no accounts, no telemetry. Everything runs on your computer, and nothing it sees ever leaves it.
 

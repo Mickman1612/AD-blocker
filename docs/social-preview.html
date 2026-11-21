@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<!-- Source of docs/social-preview.png, the repository's social preview (1280x640).
+     Self-contained: Windows system fonts only, no images or downloads. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1.0">
+<title>Local Ad Blocker social preview</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: #111a2e;
+    --panel-edge: #22304a;
+    --screen: #070c18;
+    --text: #ffffff;
+    --text-soft: #cbd5e1;
+    --text-muted: #94a3b8;
+    --green: #22c55e;
+    --green-deep: #15803d;
+    --red: #f87171;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 640px; overflow: hidden; background: var(--bg); }
+  body {
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  .canvas {
+    position: relative;
+    width: 1280px;
+    height: 640px;
+    padding: 64px 72px;
+    display: grid;
+    grid-template-columns: 1fr 448px;
+    column-gap: 46px;
+    align-items: center;
+    background:
+      radial-gradient(520px 420px at 1000px 330px, rgba(34, 197, 94, 0.13), transparent 70%),
+      radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.13) 1px, transparent 0) 0 0 / 28px 28px,
+      var(--bg);
+  }
+
+  /* Left: the message */
+  .copy { display: flex; flex-direction: column; height: 100%; }
+  .eyebrow {
+    align-self: flex-start;
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 16px;
+    border: 1px solid var(--panel-edge);
+    border-radius: 999px;
+    background: rgba(17, 26, 46, 0.8);
+    color: var(--text-soft);
+    font-size: 19px; font-weight: 600; letter-spacing: 0.2px;
+  }
+  .eyebrow .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); }
+  h1 {
+    margin-top: 34px;
+    font-size: 80px; line-height: 1; font-weight: 700; letter-spacing: -2px;
+  }
+  .tagline {
+    margin-top: 22px;
+    max-width: 590px;
+    color: var(--text-soft);
+    font-size: 31px; line-height: 1.3; font-weight: 400;
+  }
+  .tagline strong { color: var(--text); font-weight: 600; }
+  .points { margin-top: 36px; display: flex; flex-wrap: nowrap; gap: 10px; }
+  .point {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 9px 14px 9px 10px;
+    border-radius: 12px;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.32);
+    font-size: 18px; font-weight: 600; color: var(--text); white-space: nowrap;
+  }
+  .point svg { flex: none; }
+  .footer {
+    margin-top: auto;
+    display: flex; align-items: center; gap: 18px;
+    color: var(--text-muted); font-size: 20px;
+  }
+  .footer .repo { font-family: Consolas, "Cascadia Mono", monospace; color: var(--text-soft); font-size: 21px; }
+  .footer .sep { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }
+
+  /* Right: a browser window with its ads blocked */
+  .art { position: relative; height: 400px; }
+  .window {
+    position: absolute; inset: 0 0 auto 0;
+    height: 372px;
+    border-radius: 18px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+  }
+  .bar { height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 18px; border-bottom: 1px solid var(--panel-edge); }
+  .bar i { width: 12px; height: 12px; border-radius: 50%; background: #334155; display: block; }
+  .address {
+    margin-left: 14px; flex: 1; height: 28px; border-radius: 8px;
+    background: var(--screen); color: var(--text-muted);
+    display: flex; align-items: center; gap: 8px; padding: 0 12px;
+    font-size: 15px; font-family: Consolas, monospace;
+  }
+  .body { padding: 18px; display: grid; grid-template-columns: 1fr 120px; gap: 14px; }
+  .video {
+    position: relative; height: 196px; border-radius: 12px; background: var(--screen);
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .play { width: 64px; height: 64px; border-radius: 50%; background: rgba(255, 255, 255, 0.95); display: grid; place-items: center; }
+  .progress { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: #1e293b; }
+  .progress span { display: block; width: 38%; height: 100%; background: var(--green); }
+  .side { display: flex; flex-direction: column; gap: 14px; }
+  .ad {
+    position: relative; flex: 1; border-radius: 10px;
+    border: 2px dashed rgba(248, 113, 113, 0.55);
+    background: rgba(248, 113, 113, 0.06);
+    display: grid; place-items: center;
+    color: rgba(248, 113, 113, 0.85); font-size: 17px; font-weight: 700; letter-spacing: 1px;
+    overflow: hidden;
+  }
+  .ad::after {
+    content: ""; position: absolute; left: -10%; right: -10%; top: 50%; height: 2px;
+    background: rgba(248, 113, 113, 0.7); transform: rotate(-24deg);
+  }
+  .lines { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
+  .lines span { height: 12px; border-radius: 6px; background: #1e293b; display: block; }
+  .lines span:nth-child(1) { width: 72%; background: #334155; }
+  .lines span:nth-child(2) { width: 54%; }
+  .lines span:nth-child(3) { width: 63%; }
+  .badge { position: absolute; right: -26px; bottom: -12px; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.5)); }
+  .blocked {
+    position: absolute; left: 22px; bottom: 6px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 14px; border-radius: 10px;
+    background: #0f2a1b; border: 1px solid rgba(34, 197, 94, 0.45);
+    color: #bbf7d0; font-size: 17px; font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <section class="copy">
+    <span class="eyebrow"><span class="dot"></span>Free &amp; open source for Windows</span>
+    <h1>Local Ad Blocker</h1>
+    <p class="tagline">One click blocks ads across your <strong>whole Windows PC</strong>, YouTube included.</p>
+    <div class="points">
+      <span class="point">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        No filter lists
+      </span>
+      <span class="point">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        No telemetry
+      </span>
+      <span class="point">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        Nothing leaves your PC
+      </span>
+    </div>
+    <div class="footer">
+      <span class="repo">github.com/Mickman1612/AD-blocker</span>
+      <span class="sep"></span>
+      <span>MIT license</span>
+    </div>
+  </section>
+
+  <section class="art" aria-hidden="true">
+    <div class="window">
+      <div class="bar">
+        <i></i><i></i><i></i>
+        <div class="address">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          youtube.com/watch
+        </div>
+      </div>
+      <div class="body">
+        <div class="video">
+          <div class="play"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="#0b1220"/></svg></div>
+          <div class="progress"><span></span></div>
+        </div>
+        <div class="side">
+          <div class="ad">AD</div>
+          <div class="ad">AD</div>
+        </div>
+        <div class="lines"><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <span class="blocked">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M6 18L18 6"/></svg>
+      Ads blocked
+    </span>
+    <svg class="badge" width="132" height="150" viewBox="0 0 132 150">
+      <defs>
+        <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#22c55e"/>
+          <stop offset="1" stop-color="#15803d"/>
+        </linearGradient>
+      </defs>
+      <path d="M66 4 L122 24 V68 C122 106 98 132 66 146 C34 132 10 106 10 68 V24 Z" fill="url(#shield)" stroke="#0b1220" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M42 76 L59 93 L92 58" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </section>
+</div>
+</body>
+</html>
