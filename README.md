@@ -120,3 +120,7 @@ python -m tests.live.pc_wide_check
 Turn the ad blocker off first for a true comparison, because the "normal" side of these checks would otherwise be blocked too.
 
 The Android version is in `android ad/`, with its own README.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
