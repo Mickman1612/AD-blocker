@@ -1,69 +1,126 @@
 # Local Ad Blocker
 
-An ad blocker for this one PC. Every rule and script here was written for this project. It uses no outside lists or services, and nothing is sent anywhere.
+**A private, one-click ad blocker for your whole Windows PC, YouTube included.**
+No filter lists, no accounts, no telemetry. Everything runs on your computer, and nothing it sees ever leaves it.
 
-## Turn it on
+![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)
+![Python 3.12, standard library only](https://img.shields.io/badge/python-3.12%20%C2%B7%20stdlib%20only-3776AB)
+![No telemetry](https://img.shields.io/badge/telemetry-none-2ea44f)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 
-Double-click **Turn ON ad blocker** and click **Yes** when Windows asks. The window shows the result and closes by itself. Then close and reopen your browsers.
+## Why it's different
 
-That's all. There's nothing to set up in each browser, and it starts by itself every time you turn on your PC. The window only stays open if something went wrong, so you can read what happened.
+- **One click on, one click off.** No browser setup, no settings to learn. It starts by itself when you sign in to Windows.
+- **Whole PC, not just one browser.** It blocks ad servers for every app, removes YouTube and social media ads in your browsers, and switches off the ads Windows shows in Start, File Explorer and the lock screen.
+- **Nothing leaves your computer.** It has no updater, no analytics and no cloud service. It never logs or stores what you browse.
+- **Written from scratch.** Every rule and script is hand-written for this project. It uses no community filter lists and no third-party code: just Python's standard library.
+- **Careful with your security.** Banking, shopping, email and sign-in pages never pass through it, and its certificate can never be used for any other site (see [Security](#security)).
+- **Faster pages.** In our tests, CNN fully loaded in 2.4–3.1 seconds instead of 8–22, because the ads never download.
 
-To turn it off, double-click **Turn OFF ad blocker** and click **Yes**. That removes everything Turn ON added.
+## Quick start
 
-Python must stay installed, and this folder must stay where it is, because the app runs from here.
+**You need:** Windows 11 and [Python 3.12](https://www.python.org/downloads/) from python.org, with **"Add python.exe to PATH"** ticked during setup. It was developed and tested on Windows 11. Windows 10 will probably work but hasn't been tested.
 
-## What it does
+1. Download this project (**Code → Download ZIP**, then extract it, or use `git clone`) and put the folder somewhere permanent. The app runs from that folder.
+2. Double-click **`Turn ON ad blocker.cmd`** and click **Yes** when Windows asks for permission.
+3. Close and reopen your browsers.
+
+That's it. The window shows the result and closes by itself. It only stays open if something went wrong, so you can read what happened.
+
+**To turn it off,** double-click **`Turn OFF ad blocker.cmd`** and click **Yes**. That removes everything Turn ON added: the certificate, the proxy setting, the startup entry, the ad server list and the Windows settings.
+
+**To see what's on** at any time:
+
+```bash
+python proxy/install.py status
+```
+
+## What it blocks
 
 No single method removes every kind of ad, so it combines three:
 
-| Part | Reaches | Removes |
+| Layer | Reaches | Removes |
 |---|---|---|
-| Ad server list | Every app that uses Windows name lookups | Ads from known ad servers |
-| Windows settings | Windows itself | Promotions in Start, File Explorer, the lock screen and tips |
-| Filtering app | Every browser, and apps that follow the Windows proxy setting | YouTube ads, ads in social feeds and search results |
+| Ad server list (hosts file) | Every app that uses Windows name lookups | Ads and trackers from about 900 known ad servers |
+| Filtering app (local proxy) | Edge, Chrome and other apps that follow the Windows proxy setting | YouTube video ads, sponsored posts in social feeds, search ads |
+| Windows settings | Windows itself | Suggestions in Start, ads in File Explorer, lock-screen promotions, tips |
+
+## How it works
+
+```mermaid
+flowchart LR
+    Browser["Your browser"] -->|"YouTube, social, search"| App["Filtering app on 127.0.0.1"]
+    App -->|"ad data removed"| Web(("The internet"))
+    Browser -->|"everything else, including banks"| Web
+    AnyApp["Any app"] -->|"looks up an ad server"| Hosts["Hosts file: no address"]
+```
+
+- **The filtering app** is a small Python program that runs in the background and only accepts connections from your own PC. Windows sends it only known ad servers and the listed sites: YouTube, Twitch, Facebook, Instagram, X, TikTok, Pinterest, and Google, Bing and DuckDuckGo search. It refuses the ad servers. On the listed sites it blocks ad requests and adds hand-written scripts to each page as it streams through. Those scripts remove ad data before the page uses it, hide leftover ad slots and get past any video ad that slips through. Every other site connects directly, as if the app weren't there.
+- **The ad server list** adds a clearly marked block to Windows' hosts file, so any app that tries to reach a known ad server gets no address.
+- **Windows settings** are changed per user and backed up first, so Turn OFF can put them back exactly.
+
+If the filtering app ever stops, browsing carries on normally. Listed sites simply connect directly until it starts again.
+
+## Security
+
+To read the listed sites, the filtering app needs a certificate that Windows trusts. That's the risky part of any tool like this, so it's contained:
+
+- **Nothing new can ever be issued.** During setup, the certificate's private key signs one certificate for the listed sites and is then destroyed, without ever being saved to disk. Even someone with full access to your PC couldn't use it to create a certificate for your bank. Its name constraints also limit it to the listed sites.
+- **Only listed sites are read.** On those sites, what you type, including passwords and messages, passes through the app on your PC. Banks, shopping, email and account sign-in pages never touch it. The full list is in [`proxy/app.py`](proxy/app.py).
+- **Nothing is kept.** The app stores and logs nothing, and it listens on your own PC only.
+- **Easy to check, easy to remove.** It's all plain Python and PowerShell you can read, and one double-click removes it completely.
+
+Some security software warns about hosts file or certificate changes, because malware makes similar changes. These changes only ever come from running the Turn ON file.
 
 ## Speed
 
-Pages pass through the filtering app as they arrive, so it doesn't hold them back. Measured on this PC:
+Measured on our test PC, with pages already cached:
 
-| | Without blocking | With the ad blocker |
+| | Without blocking | With Local Ad Blocker |
 |---|---|---|
-| YouTube, time to first data | about 0.2 seconds | about 0.2 seconds |
-| CNN, fully loaded | 8–22 seconds | 2.4–3.1 seconds |
-| YouTube video with an ad due, until it plays | about 20 seconds, with the ad | 9–18 seconds, with no ad |
+| YouTube, time to first data | about 0.2 s | about 0.2 s |
+| CNN, fully loaded | 8–22 s | 2.4–3.1 s |
+| YouTube video with an ad due, until it plays | about 20 s, with the ad | 9–18 s, with no ad |
 
-Ad-heavy sites get faster, because their ads never download.
+Your numbers will vary with your PC and connection.
 
-## How your security is protected
+## Limitations
 
-The filtering app needs a certificate that Windows trusts, which is the risky part of any tool like this. Here's how that risk is limited:
+We'd rather be upfront:
 
-- **Nothing new can be issued.** The certificate's private key is destroyed during setup, after signing one certificate for the listed sites. Even with full access to this PC, nobody could use it to create a certificate for your bank.
-- **Only listed sites are read.** That's YouTube, Twitch, Facebook, Instagram, X, TikTok, Pinterest, and Google, Bing and DuckDuckGo search. LinkedIn, Reddit and Yahoo reject the app's connection, so they connect directly and only their ad servers are blocked. On the listed sites, passwords and messages pass through the app on this PC.
-- **Everything else goes straight to the internet.** Banks, shopping, email and account sign-in pages never touch the app. The full rules are in `proxy/app.py`.
-- **Nothing is kept.** The app stores and logs nothing, and it only accepts connections from this PC.
-- **If it stops, browsing carries on.** Listed sites connect directly, so ads may return but sites keep working.
-
-## What it can't do
-
-- **YouTube's wait:** when YouTube decides to show an ad, its server holds the video back for roughly that ad's length even when the ad is blocked. You see a spinner instead of the ad. YouTube does this on purpose, and Brave users report the same wait.
-- **YouTube's "ad blockers aren't allowed" message:** once YouTube flags an account, it sends this message with every video. Its data has to stay, because without it YouTube refuses to play ("Something went wrong"). When it pops up, the blocker closes it and the video carries on. YouTube could make this stricter at any time.
-- **Ads an app serves from its own servers,** when that app ignores the proxy setting.
-- **Empty ad boxes** on sites outside the list. The ad itself is gone but its space may remain. The optional browser extension hides these.
+- **YouTube's wait.** When YouTube decides to show an ad, its server holds the video back for about the ad's length, even when the ad is blocked. You see a short spinner instead of the ad. Brave users report the same.
+- **YouTube's "ad blockers aren't allowed" message.** YouTube can flag a signed-in account and attach this message to every video. If that happens, the blocker closes the pop-up and the video carries on. YouTube's terms don't allow ad blockers, and it could make this stricter at any time.
+- **Apps that ignore the Windows proxy setting** can still show ads that come from their own servers.
+- **Empty ad boxes** can remain on sites outside the list. The ad is gone, but its space isn't. The optional browser extension hides these.
 - **Sponsored links** that go through a blocked ad server won't open.
-- **Stream-stitched ads** on some streaming services are part of the video.
-- **Sponsor segments** that creators build into their videos.
-- **No automatic updates:** this follows from using nothing external. When a platform changes how it serves ads, some can return until the rules here are updated.
+- **Ads stitched into a video stream** on some streaming services, and **sponsor segments** that creators record into their videos, can't be removed.
+- **No automatic updates.** That follows from sending nothing anywhere. When a platform changes how it serves ads, some can return until the rules here are updated.
 
-Some security software warns about the hosts file or certificate changes, because malware makes similar changes. These only come from running the Turn ON file.
+## Optional: browser extension
 
-## Optional: the browser extension
+You don't need it, but it adds a pop-up with a per-site off switch, click-to-hide for anything on a page, and hiding of empty ad boxes on every site. To add it to Edge or Chrome, double-click `optional\Load extension in browsers.cmd` and follow the steps.
 
-You don't need this. It adds a pop-up with a per-site off switch, click-to-hide, and hiding of empty ad boxes on every site. To add it, double-click `optional\Load extension in browsers.cmd`, which walks you through the steps.
+## Android (experimental)
+
+An Android version is in [`android ad/`](android%20ad/), with its own README. It blocks ad servers across apps and browsers, needs no root, and starts by itself when the phone restarts. It's built but hasn't been tried on a real phone yet.
+
+## FAQ
+
+**Does it send my data anywhere?**
+No. It makes no network requests of its own: no updates, no analytics, no remote settings. The only traffic is your own browsing.
+
+**Is installing a certificate safe?**
+It's the part to think about, and the reason the private key is destroyed during setup. The certificate can't be used to create new certificates, and banks, shopping and sign-in pages never go through the app. See [Security](#security).
+
+**Does it work in Firefox?**
+Partly. The ad server list blocks ad servers in Firefox too, unless Firefox's DNS over HTTPS setting is on. The filtering app was tested in Edge and Chrome.
+
+**Can I add my own rules?**
+Yes. See below.
 
 ## Changing the rules
 
-The rules are in `rules-src/`. After editing them, rebuild, then run **Turn ON ad blocker** again:
+The rules are plain text files in `rules-src/`. After editing them, rebuild, then run **Turn ON ad blocker** again:
 
 ```bash
 python tools/build_rules.py
@@ -72,7 +129,7 @@ python tools/build_rules.py
 | File | Purpose |
 |---|---|
 | `rules-src/ad-domains.txt` | Ad network domains to block |
-| `rules-src/pc-hostnames.txt` | Exact ad hostnames for the ad server list, which can't match subdomains |
+| `rules-src/pc-hostnames.txt` | Exact ad hostnames for the hosts file, which can't match subdomains |
 | `rules-src/android-domains.txt` | Extra ad domains for the Android app |
 | `rules-src/url-patterns.txt` | Ad URL patterns |
 | `rules-src/surrogates.txt` | Harmless local stand-ins for ad libraries, used by the extension |
@@ -81,21 +138,34 @@ python tools/build_rules.py
 
 Per-site page logic is in `extension/content/`, and the filtering app uses those same files. To find new ad hostnames, run `python -m tests.live.harvest_hostnames`.
 
-## Tests
+## Project layout
 
-These need only Python and Edge. Browser tests use a temporary profile, so your own profile is never touched.
+| Folder | What's inside |
+|---|---|
+| `proxy/` | The filtering app, its installer and certificate maker |
+| `pc-wide/` | The hosts file block and the Windows ad settings |
+| `extension/` | The browser extension, whose page scripts the filtering app reuses |
+| `rules-src/` | Every rule, hand-written |
+| `tools/` | The rule compiler |
+| `tests/` | Unit tests, browser tests and live checks |
+| `android ad/` | The Android version |
+| `docs/` | Design notes and the decisions behind them |
+
+## Running the tests
+
+The tests need only Python and Microsoft Edge. Browser tests use a temporary profile, so your own profile is never touched.
 
 ```bash
 python -m unittest discover -s tests -t .
 ```
 
-To check that everything Turn ON sets up is in place on this PC:
+To check that everything Turn ON sets up is in place on your PC:
 
 ```bash
 python -m tests.live.installed_check
 ```
 
-Live checks visit real sites, with and without blocking:
+Live checks visit real sites, with and without blocking. Turn the ad blocker off first for a fair comparison, because the "without" side would otherwise be blocked too:
 
 ```bash
 python -m tests.live.speed_check
@@ -117,10 +187,14 @@ python -m tests.live.site_check
 python -m tests.live.pc_wide_check
 ```
 
-Turn the ad blocker off first for a true comparison, because the "normal" side of these checks would otherwise be blocked too.
+## Contributing
 
-The Android version is in `android ad/`, with its own README.
+Issues and pull requests are welcome, especially new ad rules and fixes for sites that change how they serve ads. One ground rule keeps the project what it is: **every rule is written here.** Please don't import community filter lists or add third-party code or services.
+
+## Disclaimer
+
+This is an independent project, not affiliated with or endorsed by YouTube, Google, Microsoft or any other company named here. Their names and trademarks belong to their owners. It's provided as is, without warranty, so use it at your own risk.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+[MIT](LICENSE)
